@@ -1,0 +1,441 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+//#region AccountRole
+model AccountRole {
+  id                String  @id @default(cuid())
+  name              String  @unique
+  description       String? @db.VarChar(1000)
+  isSystemRole      Boolean @default(false)
+  level             Int
+  requiresTwoFactor Boolean @default(false)
+
+  permissions String?   @db.Text // comma-separated or JSON string
+  accounts    Account[]
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("AccountRoleMetadata", fields: [metadataId], references: [id])
+}
+
+//#endregion
+
+//#region Account
+enum AccountStatus {
+  active
+  inactive
+}
+
+enum AcademicStatus {
+  active
+  inactive
+  graduated
+  suspended
+}
+
+model Account {
+  id String @id @default(cuid())
+
+  // core
+  lastLogin DateTime
+  roleId    String
+  role      AccountRole   @relation(fields: [roleId], references: [id])
+  status    AccountStatus @default(active)
+
+  // email
+  email                         String    @unique
+  emailVerified                 Boolean   @default(false)
+  emailLastChanged              DateTime
+  emailVerificationToken        String?
+  emailVerificationTokenExpires DateTime?
+
+  // profile
+  name      String
+  phone     String?   @db.VarChar(20)
+  birthDate DateTime? @db.Date
+
+  // security
+  tfaSecret                  String?
+  password                   String
+  forgotPasswordToken        String?
+  forgotPasswordTokenExpires DateTime?
+  lastPasswordChange         DateTime
+
+  // student-specific (was Estudiante)
+  accountNumber  String?         @unique @db.VarChar(20)
+  academicStatus AcademicStatus?
+  enrollmentDate DateTime?       @db.Date
+
+  // teacher-specific (was Maestro)
+  specialty    String?  @db.VarChar(150)
+  contractType String?  @db.VarChar(50)
+  campusId     String? // campus assigned by registry
+  campus       Campus?  @relation(fields: [campusId], references: [id])
+  facultyId    String?
+  faculty      Faculty? @relation(fields: [facultyId], references: [id])
+
+  // academic back-relations
+  courseInstructorAssignments CourseInstructor[]
+  coordinator                 Coordinator?
+  gradesRecorded              Grade[]            @relation("GradeRecordedBy")
+  enrollments                 Enrollment[]       @relation("EnrollmentAccount")
+  enrollmentsCancelled        Enrollment[]       @relation("EnrollmentCancelledBy")
+  requestsMade                Request[]          @relation("RequestAccount")
+  requestsProcessed           Request[]          @relation("RequestProcessedBy")
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("AccountMetadata", fields: [metadataId], references: [id])
+
+  // Back-relations for Metadata authorship
+  metadataCreated         Metadata[]              @relation("MetadataCreatedBy")
+  metadataUpdated         Metadata[]              @relation("MetadataUpdatedBy")
+  metadataDeleted         Metadata[]              @relation("MetadataDeletedBy")
+  metadataUpdateHistories MetadataUpdateHistory[] @relation("MetadataUpdateHistoryUpdatedBy")
+}
+
+//#endregion
+
+//#region Metadata
+enum MetadataStatus {
+  active
+  inactive
+}
+
+enum MetadataSource {
+  manual
+  imported
+}
+
+model Metadata {
+  id String @id @default(cuid())
+
+  documentVersion Int?
+  syncVersion     Int?
+
+  createdAt   DateTime?
+  createdById String?
+  createdBy   Account?  @relation("MetadataCreatedBy", fields: [createdById], references: [id])
+
+  updatedAt     DateTime?
+  updatedById   String?
+  updatedBy     Account?                @relation("MetadataUpdatedBy", fields: [updatedById], references: [id])
+  updateHistory MetadataUpdateHistory[]
+
+  deleted     Boolean?  @default(false)
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   Account?  @relation("MetadataDeletedBy", fields: [deletedById], references: [id])
+
+  status MetadataStatus?
+  source MetadataSource?
+  notes  String?         @db.VarChar(2000)
+  tags   String?         @db.Text
+
+  // Back-relations
+  account          Account?          @relation("AccountMetadata")
+  accountRole      AccountRole?      @relation("AccountRoleMetadata")
+  config           Config?           @relation("ConfigMetadata")
+  campus           Campus?           @relation("CampusMetadata")
+  faculty          Faculty?          @relation("FacultyMetadata")
+  period           Period?           @relation("PeriodMetadata")
+  course           Course?           @relation("CourseMetadata")
+  courseInstructor CourseInstructor? @relation("CourseInstructorMetadata")
+  prerequisite     Prerequisite?     @relation("PrerequisiteMetadata")
+  enrollment       Enrollment?       @relation("EnrollmentMetadata")
+  grade            Grade?            @relation("GradeMetadata")
+  request          Request?          @relation("RequestMetadata")
+  coordinator      Coordinator?      @relation("CoordinatorMetadata")
+}
+
+model MetadataUpdateHistory {
+  id String @id @default(cuid())
+
+  metadataId String
+  metadata   Metadata @relation(fields: [metadataId], references: [id], onDelete: Cascade)
+
+  updatedAt   DateTime
+  updatedById String?
+  updatedBy   Account? @relation("MetadataUpdateHistoryUpdatedBy", fields: [updatedById], references: [id])
+
+  changes Json
+}
+
+//#endregion
+
+//#region Config
+model Config {
+  id String @id @default(cuid())
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("ConfigMetadata", fields: [metadataId], references: [id])
+}
+
+//#endregion
+
+//#region Academic - Organization
+model Campus {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(100)
+  city      String   @db.VarChar(100)
+  address   String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.Date
+
+  faculties Faculty[]
+  accounts  Account[] // teachers assigned to this campus
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("CampusMetadata", fields: [metadataId], references: [id])
+
+  @@map("campus")
+}
+
+model Faculty {
+  id       String  @id @default(cuid())
+  campusId String
+  name     String  @db.VarChar(150)
+  code     String  @unique @db.VarChar(10)
+  dean     String? @db.VarChar(150)
+
+  campus       Campus        @relation(fields: [campusId], references: [id])
+  courses      Course[]
+  requests     Request[]
+  coordinators Coordinator[]
+  accounts     Account[] // teachers belonging to this faculty
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("FacultyMetadata", fields: [metadataId], references: [id])
+
+  @@map("faculty")
+}
+
+model Period {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(50)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  active    Boolean  @default(true)
+
+  courses     Course[]
+  enrollments Enrollment[]
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("PeriodMetadata", fields: [metadataId], references: [id])
+
+  @@map("period")
+}
+
+//#endregion
+
+//#region Academic - Courses
+model Course {
+  id          String  @id @default(cuid())
+  facultyId   String
+  periodId    String
+  code        String  @db.VarChar(20)
+  name        String  @db.VarChar(150)
+  credits     Int
+  schedule    String? @db.VarChar(100)
+  classroom   String? @db.VarChar(50)
+  maxCapacity Int     @default(30)
+
+  faculty     Faculty            @relation(fields: [facultyId], references: [id])
+  period      Period             @relation(fields: [periodId], references: [id])
+  instructors CourseInstructor[]
+  enrollments Enrollment[]
+
+  requirements     Prerequisite[] @relation("CourseWithPrerequisite")
+  isPrerequisiteOf Prerequisite[] @relation("CoursePrerequisite")
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("CourseMetadata", fields: [metadataId], references: [id])
+
+  @@unique([code, periodId])
+  @@map("course")
+}
+
+model CourseInstructor {
+  id        String  @id @default(cuid())
+  courseId  String
+  accountId String
+  active    Boolean @default(true)
+
+  course  Course  @relation(fields: [courseId], references: [id])
+  account Account @relation(fields: [accountId], references: [id])
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("CourseInstructorMetadata", fields: [metadataId], references: [id])
+
+  @@unique([courseId, accountId])
+  @@map("course_instructor")
+}
+
+model Prerequisite {
+  id                   String @id @default(cuid())
+  courseId             String // course that has the requirement
+  prerequisiteCourseId String // course that must have been passed
+
+  course       Course @relation("CourseWithPrerequisite", fields: [courseId], references: [id])
+  prerequisite Course @relation("CoursePrerequisite", fields: [prerequisiteCourseId], references: [id])
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("PrerequisiteMetadata", fields: [metadataId], references: [id])
+
+  @@map("prerequisite")
+}
+
+//#endregion
+
+//#region Academic - Enrollment & Grades
+enum EnrollmentStatus {
+  active
+  cancelled
+  completed
+  failed
+}
+
+model Enrollment {
+  id            String           @id @default(cuid())
+  accountId     String
+  courseId      String
+  periodId      String
+  registeredAt  DateTime         @default(now()) @db.Date
+  status        EnrollmentStatus @default(active)
+  cancelledAt   DateTime?        @db.Date
+  cancelledById String?
+  finalGrade    Decimal?         @db.Decimal(5, 2)
+
+  account     Account  @relation("EnrollmentAccount", fields: [accountId], references: [id])
+  cancelledBy Account? @relation("EnrollmentCancelledBy", fields: [cancelledById], references: [id])
+  course      Course   @relation(fields: [courseId], references: [id])
+  period      Period   @relation(fields: [periodId], references: [id])
+  grades      Grade[]
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("EnrollmentMetadata", fields: [metadataId], references: [id])
+
+  @@unique([accountId, courseId, periodId])
+  @@map("enrollment")
+}
+
+model Grade {
+  id           String   @id @default(cuid())
+  enrollmentId String
+  description  String   @db.VarChar(100) // "Midterm 1", "Assignment 3"
+  score        Decimal  @db.Decimal(5, 2)
+  date         DateTime @default(now()) @db.Date
+  recordedById String
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+  recordedBy Account    @relation("GradeRecordedBy", fields: [recordedById], references: [id])
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("GradeMetadata", fields: [metadataId], references: [id])
+
+  @@map("grade")
+}
+
+//#endregion
+
+//#region Academic - Requests
+enum RequestStatus {
+  pending
+  approved
+  rejected
+  in_review
+}
+
+model Request {
+  id            String        @id @default(cuid())
+  accountId     String
+  facultyId     String
+  type          String        @db.VarChar(80)
+  description   String?       @db.Text
+  date          DateTime      @default(now()) @db.Date
+  status        RequestStatus @default(pending)
+  resolvedAt    DateTime?     @db.Date
+  response      String?       @db.Text
+  processedById String?
+
+  account     Account  @relation("RequestAccount", fields: [accountId], references: [id])
+  faculty     Faculty  @relation(fields: [facultyId], references: [id])
+  processedBy Account? @relation("RequestProcessedBy", fields: [processedById], references: [id])
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("RequestMetadata", fields: [metadataId], references: [id])
+
+  @@map("request")
+}
+
+//#endregion
+
+//#region Academic - Coordinators
+model Coordinator {
+  id        String  @id @default(cuid())
+  accountId String  @unique
+  facultyId String
+  active    Boolean @default(true)
+
+  account Account @relation(fields: [accountId], references: [id])
+  faculty Faculty @relation(fields: [facultyId], references: [id])
+
+  metadataId String?   @unique
+  metadata   Metadata? @relation("CoordinatorMetadata", fields: [metadataId], references: [id])
+
+  @@map("coordinator")
+}
+
+//#endregion
+
+//#region File
+// TODO: We aint got no file storage yet
+//#endregion
+
+//#region Session
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String   @db.Text
+  expiresAt DateTime
+
+  @@map("sessions")
+}
+
+//#endregion
+
+//#region Chat
+//#endregion
+
+//#region Logs
+enum LogLevel {
+  info
+  warning
+  error
+  critical
+  debug
+  important
+}
+
+model Log {
+  id         String   @id @default(cuid())
+  date       DateTime
+  source     String
+  level      LogLevel
+  message    String   @db.Text
+  duration   Int?
+  details    Json?
+  traceId    String?
+  references Json?
+
+  @@index([date])
+  @@index([level])
+  @@index([traceId])
+  @@index([source])
+}
+
+//#endregion
