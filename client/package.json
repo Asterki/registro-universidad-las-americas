@@ -8,6 +8,7 @@
     "serve": "vite preview",
     "test": "vitest run"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "baseline-browser-mapping": "^2.10.42"
+  }
 }
