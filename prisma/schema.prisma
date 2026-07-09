@@ -168,8 +168,24 @@ model MetadataUpdateHistory {
 //#endregion
 
 //#region Config
+enum DateFormats {
+  YYYY_MM_DD
+  DD_MM_YYYY
+  MM_DD_YYYY
+}
+
+enum TimeFormats {
+  HH_MM_24
+  HH_MM_12
+}
+
 model Config {
   id String @id @default(cuid())
+
+  currencySymbol String @default("$") @db.VarChar(5)
+
+  dateFormat DateFormats @default(YYYY_MM_DD)
+  timeFormat TimeFormats @default(HH_MM_24)
 
   metadataId String?   @unique
   metadata   Metadata? @relation("ConfigMetadata", fields: [metadataId], references: [id])
