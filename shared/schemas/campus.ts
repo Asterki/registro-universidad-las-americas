@@ -53,7 +53,7 @@ const restoreSchema = z.object({
 
 // Get
 const getSchema = z.object({
-  roleIds: z.array(z.cuid()),
+  campusIds: z.array(z.cuid()),
   fields: z
     .array(
       z.enum(
