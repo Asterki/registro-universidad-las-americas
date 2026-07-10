@@ -3,7 +3,7 @@ import retry from "async-retry";
 
 import {
   Account,
-  AccountRole,
+  Campus,
   MetadataSource,
   MetadataStatus,
   MetadataUpdateHistory,
@@ -13,58 +13,57 @@ import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 
-type AccountRoleUpdateInput = Prisma.AccountRoleUpdateInput;
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 type MetadataUpdateInput = Prisma.MetadataUpdateInput;
 
-type UpdateAccountRoleParameters = {
-  roleId: string;
+type UpdateCampusParameters = {
+  campusId: string;
   name?: string;
-  description?: string;
-  level?: number;
-  permissions?: string[];
-  requiresTwoFactor?: boolean;
+  city?: string;
+  address?: string;
+  phone?: string;
+  createdAt?: Date;
 };
 
-type UpdateAccountRoleOptions = {
+type UpdateCampusOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class CampusNotFoundError extends Error {
   retryable = false;
   /** @param message Error message */
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "CampusNotFoundError";
   }
 }
 
-export class AccountRoleExistsError extends Error {
+export class CampusExistsError extends Error {
   retryable = false;
   /** @param message Error message */
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleExistsError";
+    this.name = "CampusExistsError";
   }
 }
 
-export async function updateAccountRole(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateCampus(
+  params: UpdateCampusParameters,
+  options: UpdateCampusOptions,
+): Promise<Campus> {
   const startTime = performance.now();
   const now = new Date();
 
-  const { roleId, name, description, level, permissions, requiresTwoFactor } =
+  const { campusId, name, address, city, createdAt, phone } =
     params;
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing role ensuring it's not deleted (metadata.deleted !== true)
-  const existingRole = await prismaClient.accountRole.findUnique({
+  // Fetch existing campus ensuring it's not deleted (metadata.deleted !== true)
+  const existingCampus = await prismaClient.campus.findUnique({
     where: {
-      id: roleId,
+      id: campusId,
       metadata: {
         is: {
           deleted: false,
@@ -76,34 +75,34 @@ export async function updateAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError("Account role not found or deleted");
+  if (!existingCampus) {
+    throw new CampusNotFoundError("Campus not found or deleted");
   }
 
   // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: Prisma.AccountRoleUpdateInput = {};
+  const updatePayload: Prisma.CampusUpdateInput = {};
 
   // Doing it like this because otherwise we lose type safety
   if (name !== undefined) {
     changes.name = name;
     updatePayload.name = name;
   }
-  if (description !== undefined) {
-    changes.description = description;
-    updatePayload.description = description;
+  if (address !== undefined) {
+    changes.address = address;
+    updatePayload.address = address;
   }
-  if (level !== undefined) {
-    changes.level = level;
-    updatePayload.level = level;
+  if (city !== undefined) {
+    changes.city = city;
+    updatePayload.city = city;
   }
-  if (permissions !== undefined) {
-    changes.permissions = permissions;
-    updatePayload.permissions = permissions.join(",");
+  if (phone !== undefined) {
+    changes.phone = phone;
+    updatePayload.phone = phone;
   }
-  if (requiresTwoFactor !== undefined) {
-    changes.requiresTwoFactor = requiresTwoFactor;
-    updatePayload.requiresTwoFactor = requiresTwoFactor;
+  if (createdAt !== undefined) {
+    changes.createdAt = createdAt.toISOString();
+    updatePayload.createdAt = createdAt;
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
@@ -120,7 +119,7 @@ export async function updateAccountRole(
     },
   };
 
-  if (existingRole.metadata) {
+  if (existingCampus.metadata) {
     updatePayload.metadata = { update: metadataUpdatePayload };
   } else {
     updatePayload.metadata = {
@@ -143,24 +142,24 @@ export async function updateAccountRole(
   }
 
   try {
-    const updated = await prismaClient.accountRole.update({
-      where: { id: params.roleId },
+    const updated = await prismaClient.campus.update({
+      where: { id: params.campusId },
       data: updatePayload,
       include: { metadata: { include: { updateHistory: true } } },
     });
 
     LoggingService.log({
-      source: "services:account-roles:update",
+      source: "services:campus:update",
       level: "important",
-      message: "Admin updated account role",
+      message: "Admin updated campus",
       traceId: options.traceId,
       duration: Number((performance.now() - startTime).toFixed(3)),
       details: {
-        roleId: updated.id,
+        campusId: updated.id,
         updatedBy: userAccountId != null ? userAccountId : undefined,
       },
       _references: {
-        roleId: "AccountRole",
+        campusId: "Campus",
         updatedBy: "Account",
       },
     });
@@ -172,34 +171,34 @@ export async function updateAccountRole(
       err.code === "P2002" &&
       (err.meta as any)?.target?.includes?.("name")
     ) {
-      throw new AccountRoleExistsError(
-        "An account role with this name already exists",
+      throw new CampusExistsError(
+        "A campus with this name already exists",
       );
     }
     throw err;
   }
 }
 
-export async function updateAccountRoleWithRetry(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateCampusWithRetry(
+  params: UpdateCampusParameters,
+  options: UpdateCampusOptions,
+): Promise<Campus> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await updateAccountRole(params, options);
+        return await updateCampus(params, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof CampusNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:update:retry",
+          source: "services:campus:update:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role update (attempt ${attempt})`,
+          message: `Retryable error during campus update (attempt ${attempt})`,
           details: { error: error?.message, stack: error?.stack },
         });
 

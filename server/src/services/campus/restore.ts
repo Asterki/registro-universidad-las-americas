@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Campus,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -14,30 +14,30 @@ type MetadataUpdateHistoryCreateWithoutMetadataInput =
 
 import LoggingService from "../../services/logging.js";
 
-type RestoreAccountRoleOptions = {
+type RestoreCampusOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class CampusNotFoundError extends Error {
   retryable = false;
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "CampusNotFoundError";
   }
 }
 
-export async function restoreAccountRole(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreCampus(
+  campusId: string,
+  options: RestoreCampusOptions = {},
+): Promise<Campus> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  // fetch campus with metadata + updateHistory
+  const existingCampus = await prismaClient.campus.findUnique({
     where: {
-      id: roleId,
+      id: campusId,
       metadata: {
         is: {
           deleted: true,
@@ -53,9 +53,9 @@ export async function restoreAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already restored",
+  if (!existingCampus) {
+    throw new CampusNotFoundError(
+      "Campus not found or already restored",
     );
   }
 
@@ -80,10 +80,10 @@ export async function restoreAccountRole(
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.CampusUpdateInput;
 
   // Update the metadata
-  if (existingRole.metadata) {
+  if (existingCampus.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
     // In the unlikely case that metadata doesn't exist, create it and mark as deleted
@@ -109,8 +109,8 @@ export async function restoreAccountRole(
   }
 
   // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+  const deleted = await prismaClient.campus.update({
+    where: { id: campusId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -118,18 +118,18 @@ export async function restoreAccountRole(
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:restore",
+    source: "services:campus:restore",
     level: "important",
-    message: "Account role restored",
+    message: "Campus restored",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(deleted.id),
+      campusId: String(deleted.id),
       name: deleted.name,
       ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
-      accountRoleId: "AccountRole",
+      campusId: "Campus",
       ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
     },
   });
@@ -137,26 +137,26 @@ export async function restoreAccountRole(
   return deleted;
 }
 
-export async function restoreAccountRoleWithRetry(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreCampusWithRetry(
+  campusId: string,
+  options: RestoreCampusOptions = {},
+): Promise<Campus> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await restoreAccountRole(roleId, options);
+        return await restoreCampus(campusId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof CampusNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:restore:retry",
+          source: "services:campus:restore:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role restoration (attempt ${attempt})`,
+          message: `Retryable error during campus restoration (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

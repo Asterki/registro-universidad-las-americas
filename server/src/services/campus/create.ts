@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Campus,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -12,42 +12,34 @@ import {
 
 import LoggingService from "../../services/logging.js";
 
-type CreateAccountRoleParameters = {
+type CreateCampusParameters = {
   name: string;
-  description?: string;
-  level: number;
-  isSystemRole?: boolean;
-  requiresTwoFactor?: boolean;
-  permissions?: string[];
+  city: string;
+  address: string;
+  phone: string;
+  createdAt: Date;
 };
 
-type CreateAccountRoleOptions = {
+type CreateCampusOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleExistsError extends Error {
+export class CampusExistsError extends Error {
   retryable = false;
-  constructor(message = "role-name-in-use") {
+  constructor(message = "campus-name-in-use") {
     super(message);
-    this.name = "AccountRoleExistsError";
+    this.name = "CampusExistsError";
   }
 }
 
-export async function createAccountRole(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function createCampus(
+  params: CreateCampusParameters,
+  options: CreateCampusOptions = {},
+): Promise<Campus> {
   const startTime = performance.now();
 
-  const {
-    name,
-    description = "",
-    level,
-    isSystemRole = false,
-    requiresTwoFactor = false,
-    permissions = [],
-  } = params;
+  const { name, address, city, createdAt, phone } = params;
 
   const now = new Date();
   const userAccount = options.userAccount;
@@ -71,15 +63,14 @@ export async function createAccountRole(
       },
     });
 
-    // create account role referencing metadataId
-    const role = await prismaClient.accountRole.create({
+    // create campus referencing metadataId
+    const campus = await prismaClient.campus.create({
       data: {
         name,
-        description,
-        level,
-        isSystemRole,
-        requiresTwoFactor,
-        permissions: permissions.join(","), // Prisma Json field
+        address,
+        city,
+        createdAt,
+        phone,
         metadataId: metadata.id,
       },
     });
@@ -87,21 +78,21 @@ export async function createAccountRole(
     const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
-      source: "services:account-roles:create",
+      source: "services:campus:create",
       level: "important",
-      message: "Account role created successfully",
+      message: "Campus created successfully",
       traceId: options.traceId,
       duration,
       details: {
-        accountRoleId: role.id,
+        campusId: campus.id,
         name,
       },
       _references: {
-        accountRoleId: "AccountRole",
+        campusId: "Campus",
       },
     });
 
-    return role;
+    return campus;
   } catch (err: any) {
     // handle unique constraint on name (P2002)
     if (
@@ -109,34 +100,34 @@ export async function createAccountRole(
       err.code === "P2002"
     ) {
       if ((err.meta as any)?.target?.includes?.("name")) {
-        throw new AccountRoleExistsError();
+        throw new CampusExistsError();
       }
     }
     throw err;
   }
 }
 
-export async function createAccountRoleWithRetry(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function createCampusWithRetry(
+  params: CreateCampusParameters,
+  options: CreateCampusOptions = {},
+): Promise<Campus> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await createAccountRole(params, options);
+        return await createCampus(params, options);
       } catch (error: any) {
         // non-retryable
-        if (error instanceof AccountRoleExistsError) {
+        if (error instanceof CampusExistsError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:create:retry",
+          source: "services:campus:create:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role creation (attempt ${attempt})`,
+          message: `Retryable error during campus creation (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Campus,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -14,30 +14,30 @@ type MetadataUpdateHistoryCreateWithoutMetadataInput =
 
 import LoggingService from "../../services/logging.js";
 
-type DeleteAccountRoleOptions = {
+type DeleteCampusOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class CampusNotFoundError extends Error {
   retryable = false;
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "CampusNotFoundError";
   }
 }
 
-export async function deleteAccountRole(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deleteCampus(
+  campusId: string,
+  options: DeleteCampusOptions = {},
+): Promise<Campus> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
   // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  const existingCampus = await prismaClient.campus.findUnique({
     where: {
-      id: roleId,
+      id: campusId,
       metadata: {
         is: {
           deleted: false,
@@ -53,9 +53,9 @@ export async function deleteAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already deleted",
+  if (!existingCampus) {
+    throw new CampusNotFoundError(
+      "Campus not found or already deleted",
     );
   }
 
@@ -79,10 +79,10 @@ export async function deleteAccountRole(
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.CampusUpdateInput;
 
   // Update the metadata
-  if (existingRole.metadata) {
+  if (existingCampus.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
     // In the unlikely case that metadata doesn't exist, create it and mark as deleted
@@ -108,8 +108,8 @@ export async function deleteAccountRole(
   }
 
   // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+  const deleted = await prismaClient.campus.update({
+    where: { id: campusId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -117,9 +117,9 @@ export async function deleteAccountRole(
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:delete",
+    source: "services:campus:delete",
     level: "important",
-    message: "Account role deleted",
+    message: "Campus role deleted",
     traceId: options.traceId,
     details: {
       accountRoleId: String(deleted.id),
@@ -136,26 +136,26 @@ export async function deleteAccountRole(
   return deleted;
 }
 
-export async function deleteAccountRoleWithRetry(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deleteCampusWithRetry(
+  campusId: string,
+  options: DeleteCampusOptions = {},
+): Promise<Campus> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await deleteAccountRole(roleId, options);
+        return await deleteCampus(campusId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof CampusNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:delete:retry",
+          source: "services:campus:delete:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role deletion (attempt ${attempt})`,
+          message: `Retryable error during campus deletion (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,
