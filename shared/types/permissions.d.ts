@@ -20,6 +20,11 @@ type Permission =
   | "config:read"
   | "config:export"
   | "config:import"
+  | "campuses:create"
+  | "campuses:read"
+  | "campuses:update"
+  | "campuses:delete"
+  | "campuses:restore"
   | "profile:update"
   | "logs:read"
   | "logs:export";

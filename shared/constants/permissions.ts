@@ -34,6 +34,12 @@ const permissions: Permission[] = [
   // Profile
   "profile:update",
 
+  // Campuses
+  "campuses:create",
+  "campuses:read",
+  "campuses:update",
+  "campuses:delete",
+  "campuses:restore",
 
   // Logs
   "logs:read",

@@ -4,9 +4,11 @@ import type { Express } from "express";
 import AuthRouter from "./auth.js";
 import AccountsRouter from "./accounts.js";
 import AccountRolesRouter from "./account-roles.js";
+import CampusRouter from "./campuses.js";
 
 export function registerRoutes(app: Express): void {
   app.use("/api/auth", AuthRouter);
   app.use("/api/accounts", AccountsRouter);
   app.use("/api/account-roles", AccountRolesRouter);
+  app.use("/api/campuses", CampusRouter);
 }
