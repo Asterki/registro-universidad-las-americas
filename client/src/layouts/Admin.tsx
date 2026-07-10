@@ -11,6 +11,7 @@ import {
   FaCog,
   FaRegArrowAltCircleLeft,
   FaInfo,
+  FaBuilding,
 } from "react-icons/fa";
 
 import {
@@ -94,6 +95,28 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
         key: "dashboard",
         label: <Link to="/admin">{t("sidebar.dashboard")}</Link>,
         icon: <FaCompressArrowsAlt />, // Better for dashboards
+      },
+
+      {
+        key: "institution",
+        label: "Institución",
+        icon: <FaBuilding />,
+        children: [
+          {
+            key: "institution-campuses",
+            label: (
+              <Link to="/admin/campuses">
+                Campuses
+              </Link>
+            ),
+            style: {
+              display: hasPermissions(userPermissions, ["campuses:read"])
+                ? "block"
+                : "none",
+            },
+            icon: <FaBuilding />, // Better for dashboards
+          },
+        ],
       },
 
       {
@@ -226,6 +249,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
             defaultOpenKeys={[
               "reports-group",
               "management",
+              "institution"
             ]}
             defaultSelectedKeys={[selectedPage || "dashboard"]}
             items={menuItems}
@@ -246,6 +270,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
             defaultOpenKeys={[
               "reports-group",
               "management",
+              "institution"
             ]}
             style={{
               color: "white",
