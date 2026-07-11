@@ -3,7 +3,8 @@ import retry from "async-retry";
 
 import {
   Account,
-  AccountRole,
+  Request,
+  RequestStatus,
   MetadataSource,
   MetadataStatus,
   MetadataUpdateHistory,
@@ -13,58 +14,57 @@ import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 
-type AccountRoleUpdateInput = Prisma.AccountRoleUpdateInput;
+type RequestUpdateInput = Prisma.RequestUpdateInput;
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 type MetadataUpdateInput = Prisma.MetadataUpdateInput;
 
-type UpdateAccountRoleParameters = {
-  roleId: string;
-  name?: string;
+type UpdateRequestParameters = {
+  requestId: string;
+  type?: string;
   description?: string;
-  level?: number;
-  permissions?: string[];
-  requiresTwoFactor?: boolean;
+  status?: RequestStatus;
+  response?: string;
+  resolvedAt?: Date | null;
+  processedById?: string;
 };
 
-type UpdateAccountRoleOptions = {
+type UpdateRequestOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class RequestNotFoundError extends Error {
   retryable = false;
   /** @param message Error message */
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "RequestNotFoundError";
   }
 }
 
-export class AccountRoleExistsError extends Error {
-  retryable = false;
-  /** @param message Error message */
-  constructor(message: string) {
-    super(message);
-    this.name = "AccountRoleExistsError";
-  }
-}
-
-export async function updateAccountRole(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateRequest(
+  params: UpdateRequestParameters,
+  options: UpdateRequestOptions,
+): Promise<Request> {
   const startTime = performance.now();
   const now = new Date();
 
-  const { roleId, name, description, level, permissions, requiresTwoFactor } =
-    params;
+  const {
+    requestId,
+    type,
+    description,
+    status,
+    response,
+    resolvedAt,
+    processedById,
+  } = params;
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing role ensuring it's not deleted (metadata.deleted !== true)
-  const existingRole = await prismaClient.accountRole.findUnique({
+  // Fetch existing request ensuring it's not deleted (metadata.deleted !== true)
+  const existingRequest = await prismaClient.request.findUnique({
     where: {
-      id: roleId,
+      id: requestId,
       metadata: {
         is: {
           deleted: false,
@@ -76,34 +76,44 @@ export async function updateAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError("Account role not found or deleted");
+  if (!existingRequest) {
+    throw new RequestNotFoundError("Request not found or deleted");
   }
 
   // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: Prisma.AccountRoleUpdateInput = {};
+  const updatePayload: Prisma.RequestUpdateInput = {};
 
   // Doing it like this because otherwise we lose type safety
-  if (name !== undefined) {
-    changes.name = name;
-    updatePayload.name = name;
+  if (type !== undefined) {
+    changes.type = type;
+    updatePayload.type = type;
   }
   if (description !== undefined) {
     changes.description = description;
     updatePayload.description = description;
   }
-  if (level !== undefined) {
-    changes.level = level;
-    updatePayload.level = level;
+  if (status !== undefined) {
+    changes.status = status;
+    updatePayload.status = status;
+
+    // Auto-set resolvedAt when moving out of pending, unless explicitly provided
+    if (resolvedAt === undefined && status !== RequestStatus.pending) {
+      changes.resolvedAt = now.toISOString();
+      updatePayload.resolvedAt = now;
+    }
   }
-  if (permissions !== undefined) {
-    changes.permissions = permissions;
-    updatePayload.permissions = permissions.join(",");
+  if (response !== undefined) {
+    changes.response = response;
+    updatePayload.response = response;
   }
-  if (requiresTwoFactor !== undefined) {
-    changes.requiresTwoFactor = requiresTwoFactor;
-    updatePayload.requiresTwoFactor = requiresTwoFactor;
+  if (resolvedAt !== undefined) {
+    changes.resolvedAt = resolvedAt ? resolvedAt.toISOString() : null;
+    updatePayload.resolvedAt = resolvedAt;
+  }
+  if (processedById !== undefined) {
+    changes.processedById = processedById;
+    updatePayload.processedBy = { connect: { id: processedById } };
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
@@ -120,7 +130,7 @@ export async function updateAccountRole(
     },
   };
 
-  if (existingRole.metadata) {
+  if (existingRequest.metadata) {
     updatePayload.metadata = { update: metadataUpdatePayload };
   } else {
     updatePayload.metadata = {
@@ -142,64 +152,51 @@ export async function updateAccountRole(
     };
   }
 
-  try {
-    const updated = await prismaClient.accountRole.update({
-      where: { id: params.roleId },
-      data: updatePayload,
-      include: { metadata: { include: { updateHistory: true } } },
-    });
+  const updated = await prismaClient.request.update({
+    where: { id: params.requestId },
+    data: updatePayload,
+    include: { metadata: { include: { updateHistory: true } } },
+  });
 
-    LoggingService.log({
-      source: "services:account-roles:update",
-      level: "important",
-      message: "Admin updated account role",
-      traceId: options.traceId,
-      duration: Number((performance.now() - startTime).toFixed(3)),
-      details: {
-        roleId: updated.id,
-        updatedBy: userAccountId != null ? userAccountId : undefined,
-      },
-      _references: {
-        roleId: "AccountRole",
-        updatedBy: "Account",
-      },
-    });
+  LoggingService.log({
+    source: "services:requests:update",
+    level: "important",
+    message: "Admin updated request",
+    traceId: options.traceId,
+    duration: Number((performance.now() - startTime).toFixed(3)),
+    details: {
+      requestId: updated.id,
+      updatedBy: userAccountId != null ? userAccountId : undefined,
+    },
+    _references: {
+      requestId: "Request",
+      updatedBy: "Account",
+    },
+  });
 
-    return updated;
-  } catch (err: any) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002" &&
-      (err.meta as any)?.target?.includes?.("name")
-    ) {
-      throw new AccountRoleExistsError(
-        "An account role with this name already exists",
-      );
-    }
-    throw err;
-  }
+  return updated;
 }
 
-export async function updateAccountRoleWithRetry(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateRequestWithRetry(
+  params: UpdateRequestParameters,
+  options: UpdateRequestOptions,
+): Promise<Request> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await updateAccountRole(params, options);
+        return await updateRequest(params, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof RequestNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:update:retry",
+          source: "services:requests:update:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role update (attempt ${attempt})`,
+          message: `Retryable error during request update (attempt ${attempt})`,
           details: { error: error?.message, stack: error?.stack },
         });
 

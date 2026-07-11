@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Request,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -14,30 +14,30 @@ type MetadataUpdateHistoryCreateWithoutMetadataInput =
 
 import LoggingService from "../../services/logging.js";
 
-type DeleteAccountRoleOptions = {
+type DeleteRequestOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class RequestNotFoundError extends Error {
   retryable = false;
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "RequestNotFoundError";
   }
 }
 
-export async function deleteAccountRole(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deleteRequest(
+  requestId: string,
+  options: DeleteRequestOptions = {},
+): Promise<Request> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  // fetch request with metadata + updateHistory
+  const existingRequest = await prismaClient.request.findUnique({
     where: {
-      id: roleId,
+      id: requestId,
       metadata: {
         is: {
           deleted: false,
@@ -53,9 +53,9 @@ export async function deleteAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already deleted",
+  if (!existingRequest) {
+    throw new RequestNotFoundError(
+      "Request not found or already deleted",
     );
   }
 
@@ -79,10 +79,10 @@ export async function deleteAccountRole(
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.RequestUpdateInput;
 
   // Update the metadata
-  if (existingRole.metadata) {
+  if (existingRequest.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
     // In the unlikely case that metadata doesn't exist, create it and mark as deleted
@@ -108,8 +108,8 @@ export async function deleteAccountRole(
   }
 
   // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+  const deleted = await prismaClient.request.update({
+    where: { id: requestId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -117,18 +117,18 @@ export async function deleteAccountRole(
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:delete",
+    source: "services:requests:delete",
     level: "important",
-    message: "Account role deleted",
+    message: "Request deleted",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(deleted.id),
-      name: deleted.name,
+      requestId: String(deleted.id),
+      type: deleted.type,
       ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
-      accountRoleId: "AccountRole",
+      requestId: "Request",
       ...(userAccountId !== null ? { deletedBy: "Account" } : {}),
     },
   });
@@ -136,26 +136,26 @@ export async function deleteAccountRole(
   return deleted;
 }
 
-export async function deleteAccountRoleWithRetry(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deleteRequestWithRetry(
+  requestId: string,
+  options: DeleteRequestOptions = {},
+): Promise<Request> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await deleteAccountRole(roleId, options);
+        return await deleteRequest(requestId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof RequestNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:delete:retry",
+          source: "services:requests:delete:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role deletion (attempt ${attempt})`,
+          message: `Retryable error during request deletion (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

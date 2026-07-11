@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Request,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -12,42 +12,42 @@ import {
 
 import LoggingService from "../../services/logging.js";
 
-type CreateAccountRoleParameters = {
-  name: string;
+type CreateRequestParameters = {
+  accountId: string;
+  facultyId: string;
+  type: string;
   description?: string;
-  level: number;
-  isSystemRole?: boolean;
-  requiresTwoFactor?: boolean;
-  permissions?: string[];
+  date?: Date;
 };
 
-type CreateAccountRoleOptions = {
+type CreateRequestOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleExistsError extends Error {
+export class RequestAccountNotFoundError extends Error {
   retryable = false;
-  constructor(message = "role-name-in-use") {
+  constructor(message = "request-account-not-found") {
     super(message);
-    this.name = "AccountRoleExistsError";
+    this.name = "RequestAccountNotFoundError";
   }
 }
 
-export async function createAccountRole(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export class RequestFacultyNotFoundError extends Error {
+  retryable = false;
+  constructor(message = "request-faculty-not-found") {
+    super(message);
+    this.name = "RequestFacultyNotFoundError";
+  }
+}
+
+export async function createRequest(
+  params: CreateRequestParameters,
+  options: CreateRequestOptions = {},
+): Promise<Request> {
   const startTime = performance.now();
 
-  const {
-    name,
-    description = "",
-    level,
-    isSystemRole = false,
-    requiresTwoFactor = false,
-    permissions = [],
-  } = params;
+  const { accountId, facultyId, type, description = "", date } = params;
 
   const now = new Date();
   const userAccount = options.userAccount;
@@ -71,15 +71,14 @@ export async function createAccountRole(
       },
     });
 
-    // create account role referencing metadataId
-    const role = await prismaClient.accountRole.create({
+    // create request referencing metadataId
+    const request = await prismaClient.request.create({
       data: {
-        name,
+        accountId,
+        facultyId,
+        type,
         description,
-        level,
-        isSystemRole,
-        requiresTwoFactor,
-        permissions: permissions.join(","), // Prisma Json field
+        date: date ?? now,
         metadataId: metadata.id,
       },
     });
@@ -87,56 +86,67 @@ export async function createAccountRole(
     const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
-      source: "services:account-roles:create",
+      source: "services:requests:create",
       level: "important",
-      message: "Account role created successfully",
+      message: "Request created successfully",
       traceId: options.traceId,
       duration,
       details: {
-        accountRoleId: role.id,
-        name,
+        requestId: request.id,
+        accountId,
+        facultyId,
+        type,
       },
       _references: {
-        accountRoleId: "AccountRole",
+        requestId: "Request",
+        accountId: "Account",
+        facultyId: "Faculty",
       },
     });
 
-    return role;
+    return request;
   } catch (err: any) {
-    // handle unique constraint on name (P2002)
+    // handle foreign key constraint violations (P2003)
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
+      err.code === "P2003"
     ) {
-      if ((err.meta as any)?.target?.includes?.("name")) {
-        throw new AccountRoleExistsError();
+      const target = (err.meta as any)?.field_name as string | undefined;
+      if (target?.includes("accountId")) {
+        throw new RequestAccountNotFoundError();
+      }
+      if (target?.includes("facultyId")) {
+        throw new RequestFacultyNotFoundError();
       }
     }
     throw err;
   }
 }
 
-export async function createAccountRoleWithRetry(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function createRequestWithRetry(
+  params: CreateRequestParameters,
+  options: CreateRequestOptions = {},
+): Promise<Request> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await createAccountRole(params, options);
+        return await createRequest(params, options);
       } catch (error: any) {
         // non-retryable
-        if (error instanceof AccountRoleExistsError) {
+        if (
+          error instanceof RequestAccountNotFoundError ||
+          error instanceof RequestFacultyNotFoundError
+        ) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:create:retry",
+          source: "services:requests:create:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role creation (attempt ${attempt})`,
+          message: `Retryable error during request creation (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,
