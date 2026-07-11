@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Period,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -14,30 +14,30 @@ type MetadataUpdateHistoryCreateWithoutMetadataInput =
 
 import LoggingService from "../../services/logging.js";
 
-type DeleteAccountRoleOptions = {
+type DeletePeriodOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class PeriodNotFoundError extends Error {
   retryable = false;
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "PeriodNotFoundError";
   }
 }
 
-export async function deleteAccountRole(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deletePeriod(
+  periodId: string,
+  options: DeletePeriodOptions = {},
+): Promise<Period> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  // fetch period with metadata + updateHistory
+  const existingPeriod = await prismaClient.period.findUnique({
     where: {
-      id: roleId,
+      id: periodId,
       metadata: {
         is: {
           deleted: false,
@@ -53,9 +53,9 @@ export async function deleteAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already deleted",
+  if (!existingPeriod) {
+    throw new PeriodNotFoundError(
+      "Period not found or already deleted",
     );
   }
 
@@ -79,10 +79,10 @@ export async function deleteAccountRole(
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.PeriodUpdateInput;
 
   // Update the metadata
-  if (existingRole.metadata) {
+  if (existingPeriod.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
     // In the unlikely case that metadata doesn't exist, create it and mark as deleted
@@ -108,8 +108,8 @@ export async function deleteAccountRole(
   }
 
   // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+  const deleted = await prismaClient.period.update({
+    where: { id: periodId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -117,18 +117,18 @@ export async function deleteAccountRole(
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:delete",
+    source: "services:periods:delete",
     level: "important",
-    message: "Account role deleted",
+    message: "Period deleted",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(deleted.id),
+      periodId: String(deleted.id),
       name: deleted.name,
       ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
-      accountRoleId: "AccountRole",
+      periodId: "Period",
       ...(userAccountId !== null ? { deletedBy: "Account" } : {}),
     },
   });
@@ -136,26 +136,26 @@ export async function deleteAccountRole(
   return deleted;
 }
 
-export async function deleteAccountRoleWithRetry(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deletePeriodWithRetry(
+  periodId: string,
+  options: DeletePeriodOptions = {},
+): Promise<Period> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await deleteAccountRole(roleId, options);
+        return await deletePeriod(periodId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof PeriodNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:delete:retry",
+          source: "services:periods:delete:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role deletion (attempt ${attempt})`,
+          message: `Retryable error during period deletion (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

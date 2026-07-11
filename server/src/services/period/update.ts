@@ -3,7 +3,7 @@ import retry from "async-retry";
 
 import {
   Account,
-  AccountRole,
+  Period,
   MetadataSource,
   MetadataStatus,
   MetadataUpdateHistory,
@@ -13,58 +13,55 @@ import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 
-type AccountRoleUpdateInput = Prisma.AccountRoleUpdateInput;
+type PeriodUpdateInput = Prisma.PeriodUpdateInput;
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 type MetadataUpdateInput = Prisma.MetadataUpdateInput;
 
-type UpdateAccountRoleParameters = {
-  roleId: string;
+type UpdatePeriodParameters = {
+  periodId: string;
   name?: string;
-  description?: string;
-  level?: number;
-  permissions?: string[];
-  requiresTwoFactor?: boolean;
+  startDate?: Date;
+  endDate?: Date;
+  active?: boolean;
 };
 
-type UpdateAccountRoleOptions = {
+type UpdatePeriodOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class PeriodNotFoundError extends Error {
   retryable = false;
   /** @param message Error message */
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "PeriodNotFoundError";
   }
 }
 
-export class AccountRoleExistsError extends Error {
+export class PeriodInvalidDateRangeError extends Error {
   retryable = false;
-  /** @param message Error message */
-  constructor(message: string) {
+  constructor(message = "period-end-before-start") {
     super(message);
-    this.name = "AccountRoleExistsError";
+    this.name = "PeriodInvalidDateRangeError";
   }
 }
 
-export async function updateAccountRole(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updatePeriod(
+  params: UpdatePeriodParameters,
+  options: UpdatePeriodOptions,
+): Promise<Period> {
   const startTime = performance.now();
   const now = new Date();
 
-  const { roleId, name, description, level, permissions, requiresTwoFactor } =
-    params;
+  const { periodId, name, startDate, endDate, active } = params;
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing role ensuring it's not deleted (metadata.deleted !== true)
-  const existingRole = await prismaClient.accountRole.findUnique({
+  // Fetch existing period ensuring it's not deleted (metadata.deleted !== true)
+  const existingPeriod = await prismaClient.period.findUnique({
     where: {
-      id: roleId,
+      id: periodId,
       metadata: {
         is: {
           deleted: false,
@@ -76,34 +73,38 @@ export async function updateAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError("Account role not found or deleted");
+  if (!existingPeriod) {
+    throw new PeriodNotFoundError("Period not found or deleted");
+  }
+
+  // Validate resulting date range using new values where provided, existing otherwise
+  const effectiveStartDate = startDate ?? existingPeriod.startDate;
+  const effectiveEndDate = endDate ?? existingPeriod.endDate;
+
+  if (effectiveEndDate < effectiveStartDate) {
+    throw new PeriodInvalidDateRangeError();
   }
 
   // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: Prisma.AccountRoleUpdateInput = {};
+  const updatePayload: Prisma.PeriodUpdateInput = {};
 
   // Doing it like this because otherwise we lose type safety
   if (name !== undefined) {
     changes.name = name;
     updatePayload.name = name;
   }
-  if (description !== undefined) {
-    changes.description = description;
-    updatePayload.description = description;
+  if (startDate !== undefined) {
+    changes.startDate = startDate.toISOString();
+    updatePayload.startDate = startDate;
   }
-  if (level !== undefined) {
-    changes.level = level;
-    updatePayload.level = level;
+  if (endDate !== undefined) {
+    changes.endDate = endDate.toISOString();
+    updatePayload.endDate = endDate;
   }
-  if (permissions !== undefined) {
-    changes.permissions = permissions;
-    updatePayload.permissions = permissions.join(",");
-  }
-  if (requiresTwoFactor !== undefined) {
-    changes.requiresTwoFactor = requiresTwoFactor;
-    updatePayload.requiresTwoFactor = requiresTwoFactor;
+  if (active !== undefined) {
+    changes.active = active;
+    updatePayload.active = active;
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
@@ -120,7 +121,7 @@ export async function updateAccountRole(
     },
   };
 
-  if (existingRole.metadata) {
+  if (existingPeriod.metadata) {
     updatePayload.metadata = { update: metadataUpdatePayload };
   } else {
     updatePayload.metadata = {
@@ -142,64 +143,54 @@ export async function updateAccountRole(
     };
   }
 
-  try {
-    const updated = await prismaClient.accountRole.update({
-      where: { id: params.roleId },
-      data: updatePayload,
-      include: { metadata: { include: { updateHistory: true } } },
-    });
+  const updated = await prismaClient.period.update({
+    where: { id: params.periodId },
+    data: updatePayload,
+    include: { metadata: { include: { updateHistory: true } } },
+  });
 
-    LoggingService.log({
-      source: "services:account-roles:update",
-      level: "important",
-      message: "Admin updated account role",
-      traceId: options.traceId,
-      duration: Number((performance.now() - startTime).toFixed(3)),
-      details: {
-        roleId: updated.id,
-        updatedBy: userAccountId != null ? userAccountId : undefined,
-      },
-      _references: {
-        roleId: "AccountRole",
-        updatedBy: "Account",
-      },
-    });
+  LoggingService.log({
+    source: "services:periods:update",
+    level: "important",
+    message: "Admin updated period",
+    traceId: options.traceId,
+    duration: Number((performance.now() - startTime).toFixed(3)),
+    details: {
+      periodId: updated.id,
+      updatedBy: userAccountId != null ? userAccountId : undefined,
+    },
+    _references: {
+      periodId: "Period",
+      updatedBy: "Account",
+    },
+  });
 
-    return updated;
-  } catch (err: any) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002" &&
-      (err.meta as any)?.target?.includes?.("name")
-    ) {
-      throw new AccountRoleExistsError(
-        "An account role with this name already exists",
-      );
-    }
-    throw err;
-  }
+  return updated;
 }
 
-export async function updateAccountRoleWithRetry(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updatePeriodWithRetry(
+  params: UpdatePeriodParameters,
+  options: UpdatePeriodOptions,
+): Promise<Period> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await updateAccountRole(params, options);
+        return await updatePeriod(params, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (
+          error instanceof PeriodNotFoundError ||
+          error instanceof PeriodInvalidDateRangeError
+        ) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:update:retry",
+          source: "services:periods:update:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role update (attempt ${attempt})`,
+          message: `Retryable error during period update (attempt ${attempt})`,
           details: { error: error?.message, stack: error?.stack },
         });
 
