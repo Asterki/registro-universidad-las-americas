@@ -4,40 +4,41 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Course,
   MetadataSource,
   MetadataStatus,
   Prisma,
 } from "@prisma/client";
+
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
 
-type RestoreAccountRoleOptions = {
+type RestoreCourseOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class CourseNotFoundError extends Error {
   retryable = false;
+
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "CourseNotFoundError";
   }
 }
 
-export async function restoreAccountRole(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreCourse(
+  courseId: string,
+  options: RestoreCourseOptions = {},
+): Promise<Course> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  const existingCourse = await prismaClient.course.findUnique({
     where: {
-      id: roleId,
+      id: courseId,
       metadata: {
         is: {
           deleted: true,
@@ -53,9 +54,9 @@ export async function restoreAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already restored",
+  if (!existingCourse) {
+    throw new CourseNotFoundError(
+      "Course not found or already restored",
     );
   }
 
@@ -63,30 +64,54 @@ export async function restoreAccountRole(
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
-    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
     changes: {
       "metadata.deleted": false,
       "metadata.deletedAt": null,
-      ...(userAccountId && { "metadata.deletedById": null }),
+      ...(userAccountId && {
+        "metadata.deletedById": null,
+      }),
     },
   };
 
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: false,
     deletedAt: null,
-    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    deletedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
     updatedAt: now,
-    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
-    updateHistory: { create: historyEntry },
+    updatedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
+    updateHistory: {
+      create: historyEntry,
+    },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.CourseUpdateInput;
 
-  // Update the metadata
-  if (existingRole.metadata) {
-    updatePayload = { metadata: { update: metadataUpdatePayload } };
+  if (existingCourse.metadata) {
+    updatePayload = {
+      metadata: {
+        update: metadataUpdatePayload,
+      },
+    };
   } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
     updatePayload = {
       metadata: {
         create: {
@@ -102,61 +127,78 @@ export async function restoreAccountRole(
           source: MetadataSource.manual,
           notes: "",
           tags: "",
-          updateHistory: { create: historyEntry },
+          updateHistory: {
+            create: historyEntry,
+          },
         },
       },
     };
   }
-
-  // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+    const restored = await prismaClient.course.update({
+    where: {
+      id: courseId,
+    },
     data: updatePayload,
-    include: { metadata: { include: { updateHistory: true } } },
+    include: {
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
+    },
   });
 
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:restore",
+    source: "services:course:restore",
     level: "important",
-    message: "Account role restored",
+    message: "Course restored",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(deleted.id),
-      name: deleted.name,
-      ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
+      courseId: String(restored.id),
+      name: restored.name,
+      ...(userAccountId != null
+        ? {
+            restoredBy: String(userAccountId),
+          }
+        : {}),
     },
     duration: durationMs,
     _references: {
-      accountRoleId: "AccountRole",
-      ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
+      courseId: "Course",
+      ...(userAccountId != null
+        ? {
+            restoredBy: "Account",
+          }
+        : {}),
     },
   });
 
-  return deleted;
+  return restored;
 }
 
-export async function restoreAccountRoleWithRetry(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreCourseWithRetry(
+  courseId: string,
+  options: RestoreCourseOptions = {},
+): Promise<Course> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
+
       try {
-        return await restoreAccountRole(roleId, options);
+        return await restoreCourse(courseId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof CourseNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:restore:retry",
+          source: "services:course:restore:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role restoration (attempt ${attempt})`,
+          message: `Retryable error during course restoration (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

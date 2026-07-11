@@ -3,68 +3,85 @@ import retry from "async-retry";
 
 import {
   Account,
-  AccountRole,
+  Enrollment,
+  EnrollmentStatus,
   MetadataSource,
   MetadataStatus,
   MetadataUpdateHistory,
   Prisma,
 } from "@prisma/client";
-import prismaClient from "../../config/prisma.js";
 
+import prismaClient from "../../config/prisma.js";
 import LoggingService from "../../services/logging.js";
 
-type AccountRoleUpdateInput = Prisma.AccountRoleUpdateInput;
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
+
 type MetadataUpdateInput = Prisma.MetadataUpdateInput;
 
-type UpdateAccountRoleParameters = {
-  roleId: string;
-  name?: string;
-  description?: string;
-  level?: number;
-  permissions?: string[];
-  requiresTwoFactor?: boolean;
+type UpdateEnrollmentParameters = {
+  enrollmentId: string;
+
+  accountId?: string;
+  courseId?: string;
+  periodId?: string;
+
+  registeredAt?: Date;
+  status?: EnrollmentStatus;
+
+  cancelledAt?: Date | null;
+  cancelledById?: string | null;
+
+  finalGrade?: Prisma.Decimal | number | null;
 };
 
-type UpdateAccountRoleOptions = {
+type UpdateEnrollmentOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class EnrollmentNotFoundError extends Error {
   retryable = false;
-  /** @param message Error message */
-  constructor(message: string) {
+
+  constructor(message = "enrollment-not-found") {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "EnrollmentNotFoundError";
   }
 }
 
-export class AccountRoleExistsError extends Error {
+export class EnrollmentExistsError extends Error {
   retryable = false;
-  /** @param message Error message */
-  constructor(message: string) {
+
+  constructor(message = "enrollment-already-exists") {
     super(message);
-    this.name = "AccountRoleExistsError";
+    this.name = "EnrollmentExistsError";
   }
 }
 
-export async function updateAccountRole(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateEnrollment(
+  params: UpdateEnrollmentParameters,
+  options: UpdateEnrollmentOptions = {},
+): Promise<Enrollment> {
   const startTime = performance.now();
   const now = new Date();
 
-  const { roleId, name, description, level, permissions, requiresTwoFactor } =
-    params;
+  const {
+    enrollmentId,
+    accountId,
+    courseId,
+    periodId,
+    registeredAt,
+    status,
+    cancelledAt,
+    cancelledById,
+    finalGrade,
+  } = params;
+
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing role ensuring it's not deleted (metadata.deleted !== true)
-  const existingRole = await prismaClient.accountRole.findUnique({
+  const existingEnrollment = await prismaClient.enrollment.findUnique({
     where: {
-      id: roleId,
+      id: enrollmentId,
       metadata: {
         is: {
           deleted: false,
@@ -72,56 +89,114 @@ export async function updateAccountRole(
       },
     },
     include: {
-      metadata: { include: { updateHistory: true } },
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError("Account role not found or deleted");
+  if (!existingEnrollment) {
+    throw new EnrollmentNotFoundError();
   }
 
-  // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: Prisma.AccountRoleUpdateInput = {};
 
-  // Doing it like this because otherwise we lose type safety
-  if (name !== undefined) {
-    changes.name = name;
-    updatePayload.name = name;
+  const updatePayload: Prisma.EnrollmentUpdateInput = {};
+    if (accountId !== undefined) {
+    changes.accountId = accountId;
+    updatePayload.account = {
+      connect: {
+        id: accountId,
+      },
+    };
   }
-  if (description !== undefined) {
-    changes.description = description;
-    updatePayload.description = description;
+
+  if (courseId !== undefined) {
+    changes.courseId = courseId;
+    updatePayload.course = {
+      connect: {
+        id: courseId,
+      },
+    };
   }
-  if (level !== undefined) {
-    changes.level = level;
-    updatePayload.level = level;
+
+  if (periodId !== undefined) {
+    changes.periodId = periodId;
+    updatePayload.period = {
+      connect: {
+        id: periodId,
+      },
+    };
   }
-  if (permissions !== undefined) {
-    changes.permissions = permissions;
-    updatePayload.permissions = permissions.join(",");
+
+  if (registeredAt !== undefined) {
+   changes.registeredAt = registeredAt.toISOString();
+    updatePayload.registeredAt = registeredAt;
   }
-  if (requiresTwoFactor !== undefined) {
-    changes.requiresTwoFactor = requiresTwoFactor;
-    updatePayload.requiresTwoFactor = requiresTwoFactor;
+
+  if (status !== undefined) {
+    changes.status = status;
+    updatePayload.status = status;
+  }
+
+  if (cancelledAt !== undefined) {
+   changes.cancelledAt =
+  cancelledAt === null ? null : cancelledAt.toISOString();
+    updatePayload.cancelledAt = cancelledAt;
+  }
+
+  if (cancelledById !== undefined) {
+    changes.cancelledById = cancelledById;
+
+    updatePayload.cancelledBy = cancelledById
+      ? {
+          connect: {
+            id: cancelledById,
+          },
+        }
+      : {
+          disconnect: true,
+        };
+  }
+
+  if (finalGrade !== undefined) {
+    changes.finalGrade =
+  finalGrade == null ? null : finalGrade.toString();
+    updatePayload.finalGrade = finalGrade;
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
-    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
     changes,
   };
 
   const metadataUpdatePayload: MetadataUpdateInput = {
     updatedAt: now,
-    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
     updateHistory: {
       create: historyEntry,
     },
   };
 
-  if (existingRole.metadata) {
-    updatePayload.metadata = { update: metadataUpdatePayload };
+  if (existingEnrollment.metadata) {
+    updatePayload.metadata = {
+      update: metadataUpdatePayload,
+    };
   } else {
     updatePayload.metadata = {
       create: {
@@ -137,70 +212,85 @@ export async function updateAccountRole(
         source: MetadataSource.manual,
         notes: "",
         tags: "",
-        updateHistory: { create: historyEntry },
+        updateHistory: {
+          create: historyEntry,
+        },
       },
     };
   }
 
   try {
-    const updated = await prismaClient.accountRole.update({
-      where: { id: params.roleId },
+    const updated = await prismaClient.enrollment.update({
+      where: {
+        id: enrollmentId,
+      },
       data: updatePayload,
-      include: { metadata: { include: { updateHistory: true } } },
+      include: {
+        metadata: {
+          include: {
+            updateHistory: true,
+          },
+        },
+      },
     });
 
     LoggingService.log({
-      source: "services:account-roles:update",
+      source: "services:enrollments:update",
       level: "important",
-      message: "Admin updated account role",
+      message: "Enrollment updated successfully",
       traceId: options.traceId,
       duration: Number((performance.now() - startTime).toFixed(3)),
       details: {
-        roleId: updated.id,
-        updatedBy: userAccountId != null ? userAccountId : undefined,
+        enrollmentId: updated.id,
+        updatedBy: userAccountId,
       },
       _references: {
-        roleId: "AccountRole",
+        enrollmentId: "Enrollment",
         updatedBy: "Account",
       },
     });
 
     return updated;
-  } catch (err: any) {
+      } catch (err: any) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002" &&
-      (err.meta as any)?.target?.includes?.("name")
+      err.code === "P2002"
     ) {
-      throw new AccountRoleExistsError(
-        "An account role with this name already exists",
-      );
+      throw new EnrollmentExistsError();
     }
+
     throw err;
   }
 }
 
-export async function updateAccountRoleWithRetry(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateEnrollmentWithRetry(
+  params: UpdateEnrollmentParameters,
+  options: UpdateEnrollmentOptions = {},
+): Promise<Enrollment> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
+
       try {
-        return await updateAccountRole(params, options);
+        return await updateEnrollment(params, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (
+          error instanceof EnrollmentNotFoundError ||
+          error instanceof EnrollmentExistsError
+        ) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:update:retry",
+          source: "services:enrollments:update:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role update (attempt ${attempt})`,
-          details: { error: error?.message, stack: error?.stack },
+          message: `Retryable error during enrollment update (attempt ${attempt})`,
+          details: {
+            error: error?.message,
+            stack: error?.stack,
+          },
         });
 
         throw error;

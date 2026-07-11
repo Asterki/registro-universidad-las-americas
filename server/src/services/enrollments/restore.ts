@@ -4,40 +4,41 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Enrollment,
   MetadataSource,
   MetadataStatus,
   Prisma,
 } from "@prisma/client";
+
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
 
-type RestoreAccountRoleOptions = {
+type RestoreEnrollmentOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class EnrollmentNotFoundError extends Error {
   retryable = false;
-  constructor(message: string) {
+
+  constructor(message = "enrollment-not-found") {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "EnrollmentNotFoundError";
   }
 }
 
-export async function restoreAccountRole(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreEnrollment(
+  enrollmentId: string,
+  options: RestoreEnrollmentOptions = {},
+): Promise<Enrollment> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  const existingEnrollment = await prismaClient.enrollment.findUnique({
     where: {
-      id: roleId,
+      id: enrollmentId,
       metadata: {
         is: {
           deleted: true,
@@ -53,9 +54,9 @@ export async function restoreAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already restored",
+  if (!existingEnrollment) {
+    throw new EnrollmentNotFoundError(
+      "Enrollment not found or already restored",
     );
   }
 
@@ -63,30 +64,54 @@ export async function restoreAccountRole(
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
-    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    updatedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
     changes: {
       "metadata.deleted": false,
       "metadata.deletedAt": null,
-      ...(userAccountId && { "metadata.deletedById": null }),
+      ...(userAccountId && {
+        "metadata.deletedById": null,
+      }),
     },
   };
 
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: false,
     deletedAt: null,
-    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    deletedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
     updatedAt: now,
-    updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
-    updateHistory: { create: historyEntry },
+    updatedBy: userAccountId
+      ? {
+          connect: {
+            id: userAccountId,
+          },
+        }
+      : undefined,
+    updateHistory: {
+      create: historyEntry,
+    },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.EnrollmentUpdateInput;
 
-  // Update the metadata
-  if (existingRole.metadata) {
-    updatePayload = { metadata: { update: metadataUpdatePayload } };
+  if (existingEnrollment.metadata) {
+    updatePayload = {
+      metadata: {
+        update: metadataUpdatePayload,
+      },
+    };
   } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
     updatePayload = {
       metadata: {
         create: {
@@ -102,61 +127,77 @@ export async function restoreAccountRole(
           source: MetadataSource.manual,
           notes: "",
           tags: "",
-          updateHistory: { create: historyEntry },
+          updateHistory: {
+            create: historyEntry,
+          },
         },
       },
     };
   }
-
-  // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+    const restored = await prismaClient.enrollment.update({
+    where: {
+      id: enrollmentId,
+    },
     data: updatePayload,
-    include: { metadata: { include: { updateHistory: true } } },
+    include: {
+      metadata: {
+        include: {
+          updateHistory: true,
+        },
+      },
+    },
   });
 
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:restore",
+    source: "services:enrollments:restore",
     level: "important",
-    message: "Account role restored",
+    message: "Enrollment restored",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(deleted.id),
-      name: deleted.name,
-      ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
+      enrollmentId: String(restored.id),
+      ...(userAccountId != null
+        ? {
+            restoredBy: String(userAccountId),
+          }
+        : {}),
     },
     duration: durationMs,
     _references: {
-      accountRoleId: "AccountRole",
-      ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
+      enrollmentId: "Enrollment",
+      ...(userAccountId != null
+        ? {
+            restoredBy: "Account",
+          }
+        : {}),
     },
   });
 
-  return deleted;
+  return restored;
 }
 
-export async function restoreAccountRoleWithRetry(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreEnrollmentWithRetry(
+  enrollmentId: string,
+  options: RestoreEnrollmentOptions = {},
+): Promise<Enrollment> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
+
       try {
-        return await restoreAccountRole(roleId, options);
+        return await restoreEnrollment(enrollmentId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof EnrollmentNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:restore:retry",
+          source: "services:enrollments:restore:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role restoration (attempt ${attempt})`,
+          message: `Retryable error during enrollment restoration (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

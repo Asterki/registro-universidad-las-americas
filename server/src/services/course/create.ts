@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Course,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -12,41 +12,46 @@ import {
 
 import LoggingService from "../../services/logging.js";
 
-type CreateAccountRoleParameters = {
+type CreateCourseParameters = {
+  facultyId: string;
+  periodId: string;
+  code: string;
   name: string;
-  description?: string;
-  level: number;
-  isSystemRole?: boolean;
-  requiresTwoFactor?: boolean;
-  permissions?: string[];
+  credits: number;
+  schedule?: string;
+  classroom?: string;
+  maxCapacity?: number;
 };
 
-type CreateAccountRoleOptions = {
+type CreateCourseOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleExistsError extends Error {
+export class CourseExistsError extends Error {
   retryable = false;
-  constructor(message = "role-name-in-use") {
+
+  constructor(message = "course-already-exists") {
     super(message);
-    this.name = "AccountRoleExistsError";
+    this.name = "CourseExistsError";
   }
 }
 
-export async function createAccountRole(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function createCourse(
+  params: CreateCourseParameters,
+  options: CreateCourseOptions = {},
+): Promise<Course> {
   const startTime = performance.now();
 
   const {
+    facultyId,
+    periodId,
+    code,
     name,
-    description = "",
-    level,
-    isSystemRole = false,
-    requiresTwoFactor = false,
-    permissions = [],
+    credits,
+    schedule,
+    classroom,
+    maxCapacity = 30,
   } = params;
 
   const now = new Date();
@@ -70,16 +75,17 @@ export async function createAccountRole(
         tags: "",
       },
     });
-
-    // create account role referencing metadataId
-    const role = await prismaClient.accountRole.create({
+        // create course referencing metadataId
+    const course = await prismaClient.course.create({
       data: {
+        facultyId,
+        periodId,
+        code,
         name,
-        description,
-        level,
-        isSystemRole,
-        requiresTwoFactor,
-        permissions: permissions.join(","), // Prisma Json field
+        credits,
+        schedule,
+        classroom,
+        maxCapacity,
         metadataId: metadata.id,
       },
     });
@@ -87,56 +93,56 @@ export async function createAccountRole(
     const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
-      source: "services:account-roles:create",
+      source: "services:course:create",
       level: "important",
-      message: "Account role created successfully",
+      message: "Course created successfully",
       traceId: options.traceId,
       duration,
       details: {
-        accountRoleId: role.id,
+        courseId: course.id,
+        code,
         name,
       },
       _references: {
-        accountRoleId: "AccountRole",
+        courseId: "Course",
       },
     });
 
-    return role;
+    return course;
   } catch (err: any) {
-    // handle unique constraint on name (P2002)
+    // Handle duplicate course (code + period)
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      if ((err.meta as any)?.target?.includes?.("name")) {
-        throw new AccountRoleExistsError();
-      }
+      throw new CourseExistsError();
     }
+
     throw err;
   }
 }
-
-export async function createAccountRoleWithRetry(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function createCourseWithRetry(
+  params: CreateCourseParameters,
+  options: CreateCourseOptions = {},
+): Promise<Course> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
+
       try {
-        return await createAccountRole(params, options);
+        return await createCourse(params, options);
       } catch (error: any) {
-        // non-retryable
-        if (error instanceof AccountRoleExistsError) {
+        // Non-retryable error
+        if (error instanceof CourseExistsError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:create:retry",
+          source: "services:course:create:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role creation (attempt ${attempt})`,
+          message: `Retryable error during course creation (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,
