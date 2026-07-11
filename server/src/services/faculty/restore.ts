@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Faculty,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -14,30 +14,30 @@ type MetadataUpdateHistoryCreateWithoutMetadataInput =
 
 import LoggingService from "../../services/logging.js";
 
-type RestoreAccountRoleOptions = {
+type RestoreFacultyOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class FacultyNotFoundError extends Error {
   retryable = false;
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "FacultyNotFoundError";
   }
 }
 
-export async function restoreAccountRole(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreFaculty(
+  facultyId: string,
+  options: RestoreFacultyOptions = {},
+): Promise<Faculty> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  // fetch faculty with metadata + updateHistory
+  const existingFaculty = await prismaClient.faculty.findUnique({
     where: {
-      id: roleId,
+      id: facultyId,
       metadata: {
         is: {
           deleted: true,
@@ -53,9 +53,9 @@ export async function restoreAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already restored",
+  if (!existingFaculty) {
+    throw new FacultyNotFoundError(
+      "Faculty not found or already restored",
     );
   }
 
@@ -80,10 +80,10 @@ export async function restoreAccountRole(
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.FacultyUpdateInput;
 
   // Update the metadata
-  if (existingRole.metadata) {
+  if (existingFaculty.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
     // In the unlikely case that metadata doesn't exist, create it and mark as deleted
@@ -109,8 +109,8 @@ export async function restoreAccountRole(
   }
 
   // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+  const deleted = await prismaClient.faculty.update({
+    where: { id: facultyId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -118,18 +118,18 @@ export async function restoreAccountRole(
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:restore",
+    source: "services:faculties:restore",
     level: "important",
-    message: "Account role restored",
+    message: "Faculty restored",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(deleted.id),
+      facultyId: String(deleted.id),
       name: deleted.name,
       ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
-      accountRoleId: "AccountRole",
+      facultyId: "Faculty",
       ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
     },
   });
@@ -137,26 +137,26 @@ export async function restoreAccountRole(
   return deleted;
 }
 
-export async function restoreAccountRoleWithRetry(
-  roleId: string,
-  options: RestoreAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function restoreFacultyWithRetry(
+  facultyId: string,
+  options: RestoreFacultyOptions = {},
+): Promise<Faculty> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await restoreAccountRole(roleId, options);
+        return await restoreFaculty(facultyId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof FacultyNotFoundError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:restore:retry",
+          source: "services:faculties:restore:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role restoration (attempt ${attempt})`,
+          message: `Retryable error during faculty restoration (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

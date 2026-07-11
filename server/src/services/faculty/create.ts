@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Faculty,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -12,42 +12,33 @@ import {
 
 import LoggingService from "../../services/logging.js";
 
-type CreateAccountRoleParameters = {
+type CreateFacultyParameters = {
+  campusId: string;
   name: string;
-  description?: string;
-  level: number;
-  isSystemRole?: boolean;
-  requiresTwoFactor?: boolean;
-  permissions?: string[];
+  code: string;
+  dean?: string;
 };
 
-type CreateAccountRoleOptions = {
+type CreateFacultyOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleExistsError extends Error {
+export class FacultyExistsError extends Error {
   retryable = false;
-  constructor(message = "role-name-in-use") {
+  constructor(message = "faculty-code-in-use") {
     super(message);
-    this.name = "AccountRoleExistsError";
+    this.name = "FacultyExistsError";
   }
 }
 
-export async function createAccountRole(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function createFaculty(
+  params: CreateFacultyParameters,
+  options: CreateFacultyOptions = {},
+): Promise<Faculty> {
   const startTime = performance.now();
 
-  const {
-    name,
-    description = "",
-    level,
-    isSystemRole = false,
-    requiresTwoFactor = false,
-    permissions = [],
-  } = params;
+  const { campusId, name, code, dean = "" } = params;
 
   const now = new Date();
   const userAccount = options.userAccount;
@@ -71,15 +62,13 @@ export async function createAccountRole(
       },
     });
 
-    // create account role referencing metadataId
-    const role = await prismaClient.accountRole.create({
+    // create faculty referencing metadataId
+    const faculty = await prismaClient.faculty.create({
       data: {
+        campusId,
         name,
-        description,
-        level,
-        isSystemRole,
-        requiresTwoFactor,
-        permissions: permissions.join(","), // Prisma Json field
+        code,
+        dean,
         metadataId: metadata.id,
       },
     });
@@ -87,56 +76,57 @@ export async function createAccountRole(
     const duration = Number((performance.now() - startTime).toFixed(3));
 
     LoggingService.log({
-      source: "services:account-roles:create",
+      source: "services:faculties:create",
       level: "important",
-      message: "Account role created successfully",
+      message: "Faculty created successfully",
       traceId: options.traceId,
       duration,
       details: {
-        accountRoleId: role.id,
+        facultyId: faculty.id,
         name,
+        code,
       },
       _references: {
-        accountRoleId: "AccountRole",
+        facultyId: "Faculty",
       },
     });
 
-    return role;
+    return faculty;
   } catch (err: any) {
-    // handle unique constraint on name (P2002)
+    // handle unique constraint on code (P2002)
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      if ((err.meta as any)?.target?.includes?.("name")) {
-        throw new AccountRoleExistsError();
+      if ((err.meta as any)?.target?.includes?.("code")) {
+        throw new FacultyExistsError();
       }
     }
     throw err;
   }
 }
 
-export async function createAccountRoleWithRetry(
-  params: CreateAccountRoleParameters,
-  options: CreateAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function createFacultyWithRetry(
+  params: CreateFacultyParameters,
+  options: CreateFacultyOptions = {},
+): Promise<Faculty> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await createAccountRole(params, options);
+        return await createFaculty(params, options);
       } catch (error: any) {
         // non-retryable
-        if (error instanceof AccountRoleExistsError) {
+        if (error instanceof FacultyExistsError) {
           bail(error);
         }
 
         LoggingService.log({
-          source: "services:account-roles:create:retry",
+          source: "services:faculties:create:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role creation (attempt ${attempt})`,
+          message: `Retryable error during faculty creation (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,
