@@ -10,7 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudentIndexRouteImport } from './routes/student/index'
+import { Route as InstructorIndexRouteImport } from './routes/instructor/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as StudentProfileRouteImport } from './routes/student/profile'
+import { Route as StudentMyRequestsRouteImport } from './routes/student/my-requests'
+import { Route as StudentMyGradesRouteImport } from './routes/student/my-grades'
+import { Route as StudentMyEnrollmentsRouteImport } from './routes/student/my-enrollments'
+import { Route as StudentEnrollmentRouteImport } from './routes/student/enrollment'
+import { Route as StudentCreateRequestRouteImport } from './routes/student/create-request'
+import { Route as StudentAvailableCoursesRouteImport } from './routes/student/available-courses'
+import { Route as StudentAcademicHistoryRouteImport } from './routes/student/academic-history'
+import { Route as InstructorRecordGradesRouteImport } from './routes/instructor/record-grades'
+import { Route as InstructorProfileRouteImport } from './routes/instructor/profile'
+import { Route as InstructorMyRequestsRouteImport } from './routes/instructor/my-requests'
+import { Route as InstructorMyCoursesRouteImport } from './routes/instructor/my-courses'
+import { Route as InstructorGradeHistoryRouteImport } from './routes/instructor/grade-history'
+import { Route as InstructorCreateRequestRouteImport } from './routes/instructor/create-request'
+import { Route as InstructorCourseDetailRouteImport } from './routes/instructor/course-detail'
+import { Route as InstructorClassRosterRouteImport } from './routes/instructor/class-roster'
 import { Route as ErrorsOfflineRouteImport } from './routes/errors/offline'
 import { Route as Errors404RouteImport } from './routes/errors/404'
 import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
@@ -26,9 +44,99 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentIndexRoute = StudentIndexRouteImport.update({
+  id: '/student/',
+  path: '/student/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorIndexRoute = InstructorIndexRouteImport.update({
+  id: '/instructor/',
+  path: '/instructor/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentProfileRoute = StudentProfileRouteImport.update({
+  id: '/student/profile',
+  path: '/student/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentMyRequestsRoute = StudentMyRequestsRouteImport.update({
+  id: '/student/my-requests',
+  path: '/student/my-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentMyGradesRoute = StudentMyGradesRouteImport.update({
+  id: '/student/my-grades',
+  path: '/student/my-grades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentMyEnrollmentsRoute = StudentMyEnrollmentsRouteImport.update({
+  id: '/student/my-enrollments',
+  path: '/student/my-enrollments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentEnrollmentRoute = StudentEnrollmentRouteImport.update({
+  id: '/student/enrollment',
+  path: '/student/enrollment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentCreateRequestRoute = StudentCreateRequestRouteImport.update({
+  id: '/student/create-request',
+  path: '/student/create-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentAvailableCoursesRoute = StudentAvailableCoursesRouteImport.update({
+  id: '/student/available-courses',
+  path: '/student/available-courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentAcademicHistoryRoute = StudentAcademicHistoryRouteImport.update({
+  id: '/student/academic-history',
+  path: '/student/academic-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorRecordGradesRoute = InstructorRecordGradesRouteImport.update({
+  id: '/instructor/record-grades',
+  path: '/instructor/record-grades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorProfileRoute = InstructorProfileRouteImport.update({
+  id: '/instructor/profile',
+  path: '/instructor/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorMyRequestsRoute = InstructorMyRequestsRouteImport.update({
+  id: '/instructor/my-requests',
+  path: '/instructor/my-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorMyCoursesRoute = InstructorMyCoursesRouteImport.update({
+  id: '/instructor/my-courses',
+  path: '/instructor/my-courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorGradeHistoryRoute = InstructorGradeHistoryRouteImport.update({
+  id: '/instructor/grade-history',
+  path: '/instructor/grade-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorCreateRequestRoute = InstructorCreateRequestRouteImport.update({
+  id: '/instructor/create-request',
+  path: '/instructor/create-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorCourseDetailRoute = InstructorCourseDetailRouteImport.update({
+  id: '/instructor/course-detail',
+  path: '/instructor/course-detail',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorClassRosterRoute = InstructorClassRosterRouteImport.update({
+  id: '/instructor/class-roster',
+  path: '/instructor/class-roster',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ErrorsOfflineRoute = ErrorsOfflineRouteImport.update({
@@ -86,7 +194,25 @@ export interface FileRoutesByFullPath {
   '/auth/logout': typeof AuthLogoutRoute
   '/errors/404': typeof Errors404Route
   '/errors/offline': typeof ErrorsOfflineRoute
+  '/instructor/class-roster': typeof InstructorClassRosterRoute
+  '/instructor/course-detail': typeof InstructorCourseDetailRoute
+  '/instructor/create-request': typeof InstructorCreateRequestRoute
+  '/instructor/grade-history': typeof InstructorGradeHistoryRoute
+  '/instructor/my-courses': typeof InstructorMyCoursesRoute
+  '/instructor/my-requests': typeof InstructorMyRequestsRoute
+  '/instructor/profile': typeof InstructorProfileRoute
+  '/instructor/record-grades': typeof InstructorRecordGradesRoute
+  '/student/academic-history': typeof StudentAcademicHistoryRoute
+  '/student/available-courses': typeof StudentAvailableCoursesRoute
+  '/student/create-request': typeof StudentCreateRequestRoute
+  '/student/enrollment': typeof StudentEnrollmentRoute
+  '/student/my-enrollments': typeof StudentMyEnrollmentsRoute
+  '/student/my-grades': typeof StudentMyGradesRoute
+  '/student/my-requests': typeof StudentMyRequestsRoute
+  '/student/profile': typeof StudentProfileRoute
   '/admin': typeof AdminIndexRoute
+  '/instructor': typeof InstructorIndexRoute
+  '/student': typeof StudentIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts': typeof AdminAccountsIndexRoute
 }
@@ -99,7 +225,25 @@ export interface FileRoutesByTo {
   '/auth/logout': typeof AuthLogoutRoute
   '/errors/404': typeof Errors404Route
   '/errors/offline': typeof ErrorsOfflineRoute
+  '/instructor/class-roster': typeof InstructorClassRosterRoute
+  '/instructor/course-detail': typeof InstructorCourseDetailRoute
+  '/instructor/create-request': typeof InstructorCreateRequestRoute
+  '/instructor/grade-history': typeof InstructorGradeHistoryRoute
+  '/instructor/my-courses': typeof InstructorMyCoursesRoute
+  '/instructor/my-requests': typeof InstructorMyRequestsRoute
+  '/instructor/profile': typeof InstructorProfileRoute
+  '/instructor/record-grades': typeof InstructorRecordGradesRoute
+  '/student/academic-history': typeof StudentAcademicHistoryRoute
+  '/student/available-courses': typeof StudentAvailableCoursesRoute
+  '/student/create-request': typeof StudentCreateRequestRoute
+  '/student/enrollment': typeof StudentEnrollmentRoute
+  '/student/my-enrollments': typeof StudentMyEnrollmentsRoute
+  '/student/my-grades': typeof StudentMyGradesRoute
+  '/student/my-requests': typeof StudentMyRequestsRoute
+  '/student/profile': typeof StudentProfileRoute
   '/admin': typeof AdminIndexRoute
+  '/instructor': typeof InstructorIndexRoute
+  '/student': typeof StudentIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts': typeof AdminAccountsIndexRoute
 }
@@ -113,7 +257,25 @@ export interface FileRoutesById {
   '/auth/logout': typeof AuthLogoutRoute
   '/errors/404': typeof Errors404Route
   '/errors/offline': typeof ErrorsOfflineRoute
+  '/instructor/class-roster': typeof InstructorClassRosterRoute
+  '/instructor/course-detail': typeof InstructorCourseDetailRoute
+  '/instructor/create-request': typeof InstructorCreateRequestRoute
+  '/instructor/grade-history': typeof InstructorGradeHistoryRoute
+  '/instructor/my-courses': typeof InstructorMyCoursesRoute
+  '/instructor/my-requests': typeof InstructorMyRequestsRoute
+  '/instructor/profile': typeof InstructorProfileRoute
+  '/instructor/record-grades': typeof InstructorRecordGradesRoute
+  '/student/academic-history': typeof StudentAcademicHistoryRoute
+  '/student/available-courses': typeof StudentAvailableCoursesRoute
+  '/student/create-request': typeof StudentCreateRequestRoute
+  '/student/enrollment': typeof StudentEnrollmentRoute
+  '/student/my-enrollments': typeof StudentMyEnrollmentsRoute
+  '/student/my-grades': typeof StudentMyGradesRoute
+  '/student/my-requests': typeof StudentMyRequestsRoute
+  '/student/profile': typeof StudentProfileRoute
   '/admin/': typeof AdminIndexRoute
+  '/instructor/': typeof InstructorIndexRoute
+  '/student/': typeof StudentIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts/': typeof AdminAccountsIndexRoute
 }
@@ -128,7 +290,25 @@ export interface FileRouteTypes {
     | '/auth/logout'
     | '/errors/404'
     | '/errors/offline'
+    | '/instructor/class-roster'
+    | '/instructor/course-detail'
+    | '/instructor/create-request'
+    | '/instructor/grade-history'
+    | '/instructor/my-courses'
+    | '/instructor/my-requests'
+    | '/instructor/profile'
+    | '/instructor/record-grades'
+    | '/student/academic-history'
+    | '/student/available-courses'
+    | '/student/create-request'
+    | '/student/enrollment'
+    | '/student/my-enrollments'
+    | '/student/my-grades'
+    | '/student/my-requests'
+    | '/student/profile'
     | '/admin'
+    | '/instructor'
+    | '/student'
     | '/admin/accounts/roles'
     | '/admin/accounts'
   fileRoutesByTo: FileRoutesByTo
@@ -141,7 +321,25 @@ export interface FileRouteTypes {
     | '/auth/logout'
     | '/errors/404'
     | '/errors/offline'
+    | '/instructor/class-roster'
+    | '/instructor/course-detail'
+    | '/instructor/create-request'
+    | '/instructor/grade-history'
+    | '/instructor/my-courses'
+    | '/instructor/my-requests'
+    | '/instructor/profile'
+    | '/instructor/record-grades'
+    | '/student/academic-history'
+    | '/student/available-courses'
+    | '/student/create-request'
+    | '/student/enrollment'
+    | '/student/my-enrollments'
+    | '/student/my-grades'
+    | '/student/my-requests'
+    | '/student/profile'
     | '/admin'
+    | '/instructor'
+    | '/student'
     | '/admin/accounts/roles'
     | '/admin/accounts'
   id:
@@ -154,7 +352,25 @@ export interface FileRouteTypes {
     | '/auth/logout'
     | '/errors/404'
     | '/errors/offline'
+    | '/instructor/class-roster'
+    | '/instructor/course-detail'
+    | '/instructor/create-request'
+    | '/instructor/grade-history'
+    | '/instructor/my-courses'
+    | '/instructor/my-requests'
+    | '/instructor/profile'
+    | '/instructor/record-grades'
+    | '/student/academic-history'
+    | '/student/available-courses'
+    | '/student/create-request'
+    | '/student/enrollment'
+    | '/student/my-enrollments'
+    | '/student/my-grades'
+    | '/student/my-requests'
+    | '/student/profile'
     | '/admin/'
+    | '/instructor/'
+    | '/student/'
     | '/admin/accounts/roles'
     | '/admin/accounts/'
   fileRoutesById: FileRoutesById
@@ -168,7 +384,25 @@ export interface RootRouteChildren {
   AuthLogoutRoute: typeof AuthLogoutRoute
   Errors404Route: typeof Errors404Route
   ErrorsOfflineRoute: typeof ErrorsOfflineRoute
+  InstructorClassRosterRoute: typeof InstructorClassRosterRoute
+  InstructorCourseDetailRoute: typeof InstructorCourseDetailRoute
+  InstructorCreateRequestRoute: typeof InstructorCreateRequestRoute
+  InstructorGradeHistoryRoute: typeof InstructorGradeHistoryRoute
+  InstructorMyCoursesRoute: typeof InstructorMyCoursesRoute
+  InstructorMyRequestsRoute: typeof InstructorMyRequestsRoute
+  InstructorProfileRoute: typeof InstructorProfileRoute
+  InstructorRecordGradesRoute: typeof InstructorRecordGradesRoute
+  StudentAcademicHistoryRoute: typeof StudentAcademicHistoryRoute
+  StudentAvailableCoursesRoute: typeof StudentAvailableCoursesRoute
+  StudentCreateRequestRoute: typeof StudentCreateRequestRoute
+  StudentEnrollmentRoute: typeof StudentEnrollmentRoute
+  StudentMyEnrollmentsRoute: typeof StudentMyEnrollmentsRoute
+  StudentMyGradesRoute: typeof StudentMyGradesRoute
+  StudentMyRequestsRoute: typeof StudentMyRequestsRoute
+  StudentProfileRoute: typeof StudentProfileRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  InstructorIndexRoute: typeof InstructorIndexRoute
+  StudentIndexRoute: typeof StudentIndexRoute
   AdminAccountsRolesRoute: typeof AdminAccountsRolesRoute
   AdminAccountsIndexRoute: typeof AdminAccountsIndexRoute
 }
@@ -182,11 +416,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/student/': {
+      id: '/student/'
+      path: '/student'
+      fullPath: '/student'
+      preLoaderRoute: typeof StudentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/': {
+      id: '/instructor/'
+      path: '/instructor'
+      fullPath: '/instructor'
+      preLoaderRoute: typeof InstructorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/': {
       id: '/admin/'
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/profile': {
+      id: '/student/profile'
+      path: '/student/profile'
+      fullPath: '/student/profile'
+      preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/my-requests': {
+      id: '/student/my-requests'
+      path: '/student/my-requests'
+      fullPath: '/student/my-requests'
+      preLoaderRoute: typeof StudentMyRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/my-grades': {
+      id: '/student/my-grades'
+      path: '/student/my-grades'
+      fullPath: '/student/my-grades'
+      preLoaderRoute: typeof StudentMyGradesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/my-enrollments': {
+      id: '/student/my-enrollments'
+      path: '/student/my-enrollments'
+      fullPath: '/student/my-enrollments'
+      preLoaderRoute: typeof StudentMyEnrollmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/enrollment': {
+      id: '/student/enrollment'
+      path: '/student/enrollment'
+      fullPath: '/student/enrollment'
+      preLoaderRoute: typeof StudentEnrollmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/create-request': {
+      id: '/student/create-request'
+      path: '/student/create-request'
+      fullPath: '/student/create-request'
+      preLoaderRoute: typeof StudentCreateRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/available-courses': {
+      id: '/student/available-courses'
+      path: '/student/available-courses'
+      fullPath: '/student/available-courses'
+      preLoaderRoute: typeof StudentAvailableCoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/academic-history': {
+      id: '/student/academic-history'
+      path: '/student/academic-history'
+      fullPath: '/student/academic-history'
+      preLoaderRoute: typeof StudentAcademicHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/record-grades': {
+      id: '/instructor/record-grades'
+      path: '/instructor/record-grades'
+      fullPath: '/instructor/record-grades'
+      preLoaderRoute: typeof InstructorRecordGradesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/profile': {
+      id: '/instructor/profile'
+      path: '/instructor/profile'
+      fullPath: '/instructor/profile'
+      preLoaderRoute: typeof InstructorProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/my-requests': {
+      id: '/instructor/my-requests'
+      path: '/instructor/my-requests'
+      fullPath: '/instructor/my-requests'
+      preLoaderRoute: typeof InstructorMyRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/my-courses': {
+      id: '/instructor/my-courses'
+      path: '/instructor/my-courses'
+      fullPath: '/instructor/my-courses'
+      preLoaderRoute: typeof InstructorMyCoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/grade-history': {
+      id: '/instructor/grade-history'
+      path: '/instructor/grade-history'
+      fullPath: '/instructor/grade-history'
+      preLoaderRoute: typeof InstructorGradeHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/create-request': {
+      id: '/instructor/create-request'
+      path: '/instructor/create-request'
+      fullPath: '/instructor/create-request'
+      preLoaderRoute: typeof InstructorCreateRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/course-detail': {
+      id: '/instructor/course-detail'
+      path: '/instructor/course-detail'
+      fullPath: '/instructor/course-detail'
+      preLoaderRoute: typeof InstructorCourseDetailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/class-roster': {
+      id: '/instructor/class-roster'
+      path: '/instructor/class-roster'
+      fullPath: '/instructor/class-roster'
+      preLoaderRoute: typeof InstructorClassRosterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/errors/offline': {
@@ -264,7 +624,25 @@ const rootRouteChildren: RootRouteChildren = {
   AuthLogoutRoute: AuthLogoutRoute,
   Errors404Route: Errors404Route,
   ErrorsOfflineRoute: ErrorsOfflineRoute,
+  InstructorClassRosterRoute: InstructorClassRosterRoute,
+  InstructorCourseDetailRoute: InstructorCourseDetailRoute,
+  InstructorCreateRequestRoute: InstructorCreateRequestRoute,
+  InstructorGradeHistoryRoute: InstructorGradeHistoryRoute,
+  InstructorMyCoursesRoute: InstructorMyCoursesRoute,
+  InstructorMyRequestsRoute: InstructorMyRequestsRoute,
+  InstructorProfileRoute: InstructorProfileRoute,
+  InstructorRecordGradesRoute: InstructorRecordGradesRoute,
+  StudentAcademicHistoryRoute: StudentAcademicHistoryRoute,
+  StudentAvailableCoursesRoute: StudentAvailableCoursesRoute,
+  StudentCreateRequestRoute: StudentCreateRequestRoute,
+  StudentEnrollmentRoute: StudentEnrollmentRoute,
+  StudentMyEnrollmentsRoute: StudentMyEnrollmentsRoute,
+  StudentMyGradesRoute: StudentMyGradesRoute,
+  StudentMyRequestsRoute: StudentMyRequestsRoute,
+  StudentProfileRoute: StudentProfileRoute,
   AdminIndexRoute: AdminIndexRoute,
+  InstructorIndexRoute: InstructorIndexRoute,
+  StudentIndexRoute: StudentIndexRoute,
   AdminAccountsRolesRoute: AdminAccountsRolesRoute,
   AdminAccountsIndexRoute: AdminAccountsIndexRoute,
 }

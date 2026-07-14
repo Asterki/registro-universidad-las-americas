@@ -1,0 +1,56 @@
+import { Request, Response, NextFunction } from "express";
+
+import * as CatalogsAPITypes from "../../../../shared/api/catalogs.js";
+
+import LoggingService from "../../services/logging.js";
+import { listRequestStatuses } from "../../services/catalogs/indexes.js";
+
+const handler = async (
+  req: Request<{}, {}, CatalogsAPITypes.ListRequestStatusesRequestBody>,
+  res: Response<CatalogsAPITypes.ListStatusesResponse>,
+  _next: NextFunction,
+) => {
+  const start = performance.now();
+
+  try {
+    const statuses = await listRequestStatuses({
+      traceId: req.traceId,
+      userAccount: req.user,
+    });
+
+    const duration = performance.now() - start;
+
+    LoggingService.log({
+      source: "api:request-status:list",
+      level: "info",
+      message: "Request statuses listed successfully",
+      traceId: req.traceId,
+      duration,
+      details: {
+        count: statuses.length,
+      },
+    });
+
+    res.status(200).json({
+      status: "success",
+      statuses,
+    });
+  } catch (error: unknown) {
+    const duration = performance.now() - start;
+
+    if (error instanceof Error) {
+      LoggingService.log({
+        source: "api:request-status:list",
+        level: "error",
+        message: "Error listing request statuses",
+        traceId: req.traceId,
+        details: { error: error.message, stack: error.stack },
+        duration,
+      });
+    }
+
+    res.status(500).json({ status: "internal-error" });
+  }
+};
+
+export default handler;

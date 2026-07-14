@@ -13,7 +13,7 @@ const axiosClient = axios.create({
   withCredentials: true, // Always include credentials
 });
 
-export const accountRolesList = {
+export const accountRolesApi = {
   async create(
     data: RolesAPITypes.CreateRequestBody,
   ): Promise<RolesAPITypes.CreateResponseData> {
@@ -100,4 +100,4 @@ export const accountRolesList = {
   },
 };
 
-export default accountRolesList;
+export default accountRolesApi;

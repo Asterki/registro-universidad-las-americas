@@ -4,10 +4,10 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  Request,
   MetadataSource,
   MetadataStatus,
   Prisma,
+  Request,
 } from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
@@ -79,6 +79,7 @@ export async function createRequest(
         type,
         description,
         date: date ?? now,
+        status: "pending",
         metadataId: metadata.id,
       },
     });

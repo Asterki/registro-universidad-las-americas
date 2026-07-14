@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as RolesAPITypes from "../../../../shared/api/campus";
+import * as CampusesAPITypes from "../../../../shared/api/campus";
 import ApiUtils from "../../utils/api";
 
 const baseUrl =
@@ -15,10 +15,10 @@ const axiosClient = axios.create({
 
 export const campusesApi = {
   async create(
-    data: RolesAPITypes.CreateRequestBody,
-  ): Promise<RolesAPITypes.CreateResponseData> {
+    data: CampusesAPITypes.CreateRequestBody,
+  ): Promise<CampusesAPITypes.CreateResponseData> {
     try {
-      const response = await axiosClient.post<RolesAPITypes.CreateResponseData>(
+      const response = await axiosClient.post<CampusesAPITypes.CreateResponseData>(
         "/create",
         data,
       );
@@ -29,10 +29,10 @@ export const campusesApi = {
   },
 
   async get(
-    data: RolesAPITypes.GetRequestBody,
-  ): Promise<RolesAPITypes.GetResponseData> {
+    data: CampusesAPITypes.GetRequestBody,
+  ): Promise<CampusesAPITypes.GetResponseData> {
     try {
-      const response = await axiosClient.post<RolesAPITypes.GetResponseData>(
+      const response = await axiosClient.post<CampusesAPITypes.GetResponseData>(
         "/get",
         data,
       );
@@ -43,10 +43,10 @@ export const campusesApi = {
   },
 
   async update(
-    data: RolesAPITypes.UpdateRequestBody,
-  ): Promise<RolesAPITypes.UpdateResponseData> {
+    data: CampusesAPITypes.UpdateRequestBody,
+  ): Promise<CampusesAPITypes.UpdateResponseData> {
     try {
-      const response = await axiosClient.post<RolesAPITypes.UpdateResponseData>(
+      const response = await axiosClient.post<CampusesAPITypes.UpdateResponseData>(
         "/update",
         data,
       );
@@ -57,10 +57,10 @@ export const campusesApi = {
   },
 
   async delete(
-    data: RolesAPITypes.DeleteRequestBody,
-  ): Promise<RolesAPITypes.DeleteResponseData> {
+    data: CampusesAPITypes.DeleteRequestBody,
+  ): Promise<CampusesAPITypes.DeleteResponseData> {
     try {
-      const response = await axiosClient.post<RolesAPITypes.DeleteResponseData>(
+      const response = await axiosClient.post<CampusesAPITypes.DeleteResponseData>(
         "/delete",
         data,
       );
@@ -71,11 +71,11 @@ export const campusesApi = {
   },
 
   async restore(
-    data: RolesAPITypes.RestoreRequestBody,
-  ): Promise<RolesAPITypes.RestoreResponseData> {
+    data: CampusesAPITypes.RestoreRequestBody,
+  ): Promise<CampusesAPITypes.RestoreResponseData> {
     try {
       const response =
-        await axiosClient.post<RolesAPITypes.RestoreResponseData>(
+        await axiosClient.post<CampusesAPITypes.RestoreResponseData>(
           "/restore",
           data,
         );
@@ -86,10 +86,10 @@ export const campusesApi = {
   },
 
   async list(
-    data: RolesAPITypes.ListRequestBody,
-  ): Promise<RolesAPITypes.ListResponseData> {
+    data: CampusesAPITypes.ListRequestBody,
+  ): Promise<CampusesAPITypes.ListResponseData> {
     try {
-      const response = await axiosClient.post<RolesAPITypes.ListResponseData>(
+      const response = await axiosClient.post<CampusesAPITypes.ListResponseData>(
         "/list",
         data,
       );
