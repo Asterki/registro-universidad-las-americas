@@ -99,6 +99,22 @@ type Permission =
   | "registry:process-requests"
   | "registry:list-instructors"
   // Catalogs
-  | "catalogs:list";
+  | "catalogs:list"
+  // Faculties
+  | "faculties:create"
+  | "faculties:read"
+  | "faculties:update"
+  | "faculties:delete"
+  | "faculties:restore"
+  // Courses Management
+  | "courses:create"
+  | "courses:update"
+  | "courses:delete"
+  | "courses:restore"
+  // Periods Management
+  | "periods:create"
+  | "periods:update"
+  | "periods:delete"
+  | "periods:restore";
 
 export type { Permission };

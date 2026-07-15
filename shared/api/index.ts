@@ -22,4 +22,11 @@ export type ResponseStatus =
   | "invalid-period"
   | "period-not-found"
   | "already-assigned"
-  | "instructor-not-found";
+  | "instructor-not-found"
+  | "faculty-not-found"
+  | "name-in-use"
+  | "code-in-use"
+  | "course-code-exists"
+  | "period-end-before-start"
+  | "period-name-in-use"
+  | "campus-not-found";

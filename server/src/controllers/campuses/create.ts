@@ -21,9 +21,7 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { name, address, city,
-    createdAt, phone
-  } = req.body;
+  const { name, address, city, phone } = req.body;
 
   const userAccount = req.user!; // We can assert this because the route should be protected by authentication middleware
 
@@ -48,7 +46,9 @@ const handler = async (
       {
         name,
         address,
-        city, createdAt, phone
+        city,
+        createdAt: new Date(),
+        phone,
       },
       {
         userAccount,

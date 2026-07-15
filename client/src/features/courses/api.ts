@@ -13,6 +13,8 @@ const axiosClient = axios.create({
 });
 
 export const coursesApi = {
+  // --- Existing methods ---
+
   async listByPeriod(
     data: CoursesAPITypes.ListCoursesByPeriodRequestBody,
   ): Promise<CoursesAPITypes.ListCoursesResponse> {
@@ -97,6 +99,92 @@ export const coursesApi = {
           "/roster/get",
           data,
         );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
+
+  // --- CRUD Methods for Admin ---
+
+  async get(
+    data: CoursesAPITypes.GetCourseRequestBody,
+  ): Promise<CoursesAPITypes.ListCoursesResponseData> {
+    try {
+      const response = await axiosClient.post<CoursesAPITypes.ListCoursesResponseData>(
+        "/get",
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
+
+  async list(
+    data: CoursesAPITypes.ListCoursesRequestBody,
+  ): Promise<CoursesAPITypes.ListCoursesResponseData> {
+    try {
+      const response = await axiosClient.post<CoursesAPITypes.ListCoursesResponseData>(
+        "/list",
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
+
+  async create(
+    data: CoursesAPITypes.CreateCourseRequestBody,
+  ): Promise<CoursesAPITypes.CreateCourseResponseData> {
+    try {
+      const response = await axiosClient.post<CoursesAPITypes.CreateCourseResponseData>(
+        "/create",
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
+
+  async update(
+    data: CoursesAPITypes.UpdateCourseRequestBody,
+  ): Promise<CoursesAPITypes.UpdateCourseResponseData> {
+    try {
+      const response = await axiosClient.post<CoursesAPITypes.UpdateCourseResponseData>(
+        "/update",
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
+
+  async delete(
+    data: CoursesAPITypes.DeleteCourseRequestBody,
+  ): Promise<CoursesAPITypes.DeleteCourseResponseData> {
+    try {
+      const response = await axiosClient.post<CoursesAPITypes.DeleteCourseResponseData>(
+        "/delete",
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      return ApiUtils.handleAxiosError(error);
+    }
+  },
+
+  async restore(
+    data: CoursesAPITypes.RestoreCourseRequestBody,
+  ): Promise<CoursesAPITypes.RestoreCourseResponseData> {
+    try {
+      const response = await axiosClient.post<CoursesAPITypes.RestoreCourseResponseData>(
+        "/restore",
+        data,
+      );
       return response.data;
     } catch (error) {
       return ApiUtils.handleAxiosError(error);

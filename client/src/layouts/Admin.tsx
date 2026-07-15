@@ -12,6 +12,9 @@ import {
   FaRegArrowAltCircleLeft,
   FaInfo,
   FaBuilding,
+  FaUniversity,
+  FaBook,
+  FaCalendarAlt,
 } from "react-icons/fa";
 
 import {
@@ -114,7 +117,49 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
                 ? "block"
                 : "none",
             },
-            icon: <FaBuilding />, // Better for dashboards
+            icon: <FaBuilding />,
+          },
+          {
+            key: "institution-faculties",
+            label: (
+              <Link to="/admin/faculties">
+                Facultades
+              </Link>
+            ),
+            style: {
+              display: hasPermissions(userPermissions, ["faculties:read"])
+                ? "block"
+                : "none",
+            },
+            icon: <FaUniversity />,
+          },
+          {
+            key: "institution-courses",
+            label: (
+              <Link to="/admin/courses">
+                Cursos
+              </Link>
+            ),
+            style: {
+              display: hasPermissions(userPermissions, ["courses:read"])
+                ? "block"
+                : "none",
+            },
+            icon: <FaBook />,
+          },
+          {
+            key: "institution-periods",
+            label: (
+              <Link to="/admin/periods">
+                Períodos
+              </Link>
+            ),
+            style: {
+              display: hasPermissions(userPermissions, ["periods:read"])
+                ? "block"
+                : "none",
+            },
+            icon: <FaCalendarAlt />,
           },
         ],
       },

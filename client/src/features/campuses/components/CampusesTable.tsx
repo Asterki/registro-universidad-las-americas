@@ -71,7 +71,7 @@ export function CampusesTable({
             dataIndex: "phone",
           },
           {
-            title: t("actions"),
+            title: "Acciones",
             key: "actions",
             fixed: "right",
             render: (_: any, record: ListCampus) => {
@@ -95,14 +95,14 @@ export function CampusesTable({
                 ? [
                   {
                     key: "update",
-                    label: t("actionButtons.update"),
+                    label: "Editar",
                     icon: <FaPencilAlt />,
                     disabled: !canUpdate,
                     onClick: () => onUpdate(record),
                   },
                   {
                     key: "delete",
-                    label: t("actionButtons.delete"),
+                    label: "Eliminar",
                     danger: true,
                     icon: <FaTrash />,
                     disabled: !canDelete,
@@ -112,7 +112,7 @@ export function CampusesTable({
                 : [
                   {
                     key: "restore",
-                    label: t("actionButtons.restore"),
+                    label: "Restaurar",
                     icon: <FaTrashRestore />,
                     disabled: !canRestore || !record.deleted,
                     className: record.deleted ? "hidden" : "",
@@ -124,7 +124,7 @@ export function CampusesTable({
                 <Space>
                   <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
                     <Button icon={<FaEllipsisH />}>
-                      {t("actionButtons.trigger")}
+                      Acciones
                     </Button>
                   </Dropdown>
                 </Space>
@@ -136,11 +136,7 @@ export function CampusesTable({
           pageSize: campusesListState.count,
           total: campuses.totalCampuses,
           current: campusesListState.page + 1,
-          showTotal: (total, range) =>
-            t("total", {
-              total: total,
-              range: range[0] + "-" + range[1],
-            }),
+          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} campus`,
           showSizeChanger: true,
           onChange: (current, size) => {
             fetchCampuses({

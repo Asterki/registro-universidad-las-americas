@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { metadataFields, metadataPopulateFields } from "./index.js"
+import { metadataFields, metadataPopulateFields } from "./index.js";
 
 // Shared fields
 const nameSchema = z
@@ -28,7 +28,6 @@ const createSchema = z.object({
   city: citySchema,
   address: addressSchema,
   phone: phoneSchema,
-  createdAt: createdAtSchema,
 });
 
 // Update (cannot update `isSystemRole`)
@@ -70,7 +69,9 @@ const getSchema = z.object({
       ),
     )
     .optional(),
-  populate: z.array(z.enum(metadataPopulateFields, "invalid-populate-path")).optional(),
+  populate: z
+    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
+    .optional(),
 });
 
 // List
@@ -80,8 +81,10 @@ const listSchema = z.object({
   includeDeleted: z.boolean().optional(),
   search: z
     .object({
-      query: z.string().min(1, "query-too-short"),
-      searchIn: z.array(z.enum(["name", "description"], "invalid-search-field")),
+      query: z.string().max(100, "query-too-long"),
+      searchIn: z.array(
+        z.enum(["name", "description"], "invalid-search-field"),
+      ),
     })
     .optional(),
   fields: z
@@ -100,7 +103,9 @@ const listSchema = z.object({
       ),
     )
     .optional(),
-  populate: z.array(z.enum(metadataPopulateFields, "invalid-populate-path")).optional(),
+  populate: z
+    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
+    .optional(),
 });
 
 export {
@@ -111,4 +116,3 @@ export {
   restoreSchema,
   listSchema,
 };
-

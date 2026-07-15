@@ -16,6 +16,7 @@ import AccountProfilesRouter from "./account-profiles.js";
 import CoordinatorRouter from "./coordinator.js";
 import RegistryRouter from "./registry.js";
 import CatalogsRouter from "./catalogs.js";
+import FacultiesRouter from "./faculties.js";
 
 export function registerRoutes(app: Express): void {
   app.use("/api/auth", AuthRouter);
@@ -33,4 +34,5 @@ export function registerRoutes(app: Express): void {
   app.use("/api/coordinator", CoordinatorRouter);
   app.use("/api/registry", RegistryRouter);
   app.use("/api/catalogs", CatalogsRouter);
+  app.use("/api/faculties", FacultiesRouter);
 }

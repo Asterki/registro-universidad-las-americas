@@ -10,10 +10,9 @@ import { App, Button, Input, Typography, Switch } from "antd";
 const { Title, Text } = Typography;
 
 import AdminPageLayout from "../../layouts/Admin";
-import { FaBuilding, FaPlus, FaUserShield } from "react-icons/fa";
+import { FaBuilding, FaPlus } from "react-icons/fa";
 
 import CampusesFeature from "../../features/campuses";
-import roles from "client/src/features/roles";
 
 export const Route = createFileRoute("/admin/campuses")({
   component: RouteComponent,
@@ -25,14 +24,70 @@ function RouteComponent() {
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
 
-  const { t: tPage } = useTranslation(["pages"], {
-    keyPrefix: "admin.campuses",
-  });
   const { t: tCommon } = useTranslation(["common"]);
 
   const { campuses, campusesListState, fetchCampuses } =
     CampusesFeature.hooks.useList({});
 
+  //#region Create Campus
+  const {
+    openModal: openCreateCampusModal,
+    closeModal: closeCreateCampusModal,
+    setState: setCreateCampusModalState,
+    state: createCampusModalState,
+    createCampus: handleCreateCampus,
+  } = CampusesFeature.hooks.useCreateModal({
+    onSuccess: async () => {
+      await fetchCampuses({});
+    },
+  });
+  //#endregion
+
+  //#region Delete Campus
+  const handleDeleteCampus = async (campusId: string) => {
+    if (!campusId) return;
+    const result = await CampusesFeature.api.delete({
+      campusId: campusId,
+    });
+
+    if (result.status == "success") {
+      message.success("Campus eliminado exitosamente");
+      fetchCampuses({ count: 50, page: 0 });
+    } else {
+      message.error(`Error: ${result.status}`);
+    }
+  };
+  //#endregion
+
+  //#region Restore a campus
+  const handleRestoreCampus = async (campusId: string) => {
+    if (!campusId) return;
+    const result = await CampusesFeature.api.restore({
+      campusId: campusId,
+    });
+
+    if (result.status == "success") {
+      message.success("Campus restaurado exitosamente");
+      fetchCampuses({ count: 50, page: 0 });
+    } else {
+      message.error(`Error: ${result.status}`);
+    }
+  };
+  //#endregion
+
+  // #region Update a campus
+  const {
+    state: updateCampusState,
+    setState: setUpdateCampusState,
+    openDrawer: openUpdateCampusDrawer,
+    update: handleUpdateCampus,
+    reset: closeUpdateCampusDrawer,
+  } = CampusesFeature.hooks.useUpdateDrawer({
+    onSuccess: async () => {
+      await fetchCampuses({});
+    },
+  });
+  //#endregion
 
   useEffect(() => {
     if (!account) return; // Admin layout will handle this
@@ -40,7 +95,7 @@ function RouteComponent() {
       !account.data.role.permissions.includes("campuses:read") &&
       !account.data.role.permissions.includes("*")
     ) {
-      message.error(tPage("error-messages:forbidden"));
+      message.error("No tienes permiso de estar en esta página.");
       navigate({ to: "/admin" });
       return;
     } else {
@@ -52,6 +107,21 @@ function RouteComponent() {
 
   return (
     <AdminPageLayout selectedPage="institution-campuses">
+      {/* Create Campus */}
+      <CampusesFeature.components.CreateModal
+        onClose={closeCreateCampusModal}
+        onCreate={handleCreateCampus}
+        state={createCampusModalState}
+        setState={setCreateCampusModalState}
+      />
+
+      <CampusesFeature.components.UpdateDrawer
+        state={updateCampusState}
+        setState={setUpdateCampusState}
+        onClose={closeUpdateCampusDrawer}
+        onUpdate={handleUpdateCampus}
+      />
+
       <div className="mb-2">
         {tCommon("loggedInAs", {
           name: account?.profile.name,
@@ -80,7 +150,7 @@ function RouteComponent() {
             )
           }
           onClick={() => {
-            // openCreateAccountRoleModal();
+            openCreateCampusModal();
           }}
           icon={<FaPlus />}
         >
@@ -106,7 +176,7 @@ function RouteComponent() {
           }}
           loading={campusesListState.loading}
           enterButton={tCommon("search")}
-          placeholder={tPage("searchPlaceholder")}
+          placeholder={"Buscar campus..."}
         />
       </div>
 
@@ -117,23 +187,19 @@ function RouteComponent() {
           campusesListState={campusesListState}
           onRestore={(campus) => {
             modal.confirm({
-              title: tPage("modals.restore.title"),
-              content: tPage("modals.restore.content", {
-                name: campus.name,
-              }),
-              // onOk: () => handleRestoreAccountRole(accRole.id),
+              title: "Restaurar campus",
+              content: "¿Estás seguro de que deseas restaurar el campus?",
+              onOk: () => handleRestoreCampus(campus.id),
             });
           }}
           onUpdate={(campus) => {
-            // openUpdateAccountRoleDrawer(accRole.id);
+            openUpdateCampusDrawer(campus.id);
           }}
           onDelete={(campus) => {
             modal.confirm({
-              title: tPage("modals.delete.title"),
-              content: tPage("modals.delete.content", {
-                name: campus.name,
-              }),
-              // onOk: () => handleDeleteAccountRole(campus.id),
+              title: "Eliminar campus",
+              content: "¿Estás seguro de que deseas eliminar el campus?",
+              onOk: () => handleDeleteCampus(campus.id),
             });
           }}
         />
@@ -150,9 +216,8 @@ function RouteComponent() {
           }}
         />
 
-        <label htmlFor="page-show-deleted">{tPage("showDeleted")}</label>
+        <label htmlFor="page-show-deleted">Mostrar eliminados</label>
       </div>
     </AdminPageLayout>
   );
 }
-

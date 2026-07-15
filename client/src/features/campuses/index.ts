@@ -15,13 +15,13 @@ export interface ListCampus {
 
 // Hooks
 import { useList } from "./hooks/useList";
-// import { useCreateModal } from "./hooks/useCreateModal";
-// import { useUpdateDrawer } from "./hooks/useUpdateDrawer";
+import { useCreateModal } from "./hooks/useCreateModal";
+import { useUpdateDrawer } from "./hooks/useUpdateDrawer";
 
 // Components
 import { CampusesTable } from "./components/CampusesTable";
-// import { UpdateDrawer } from "./components/UpdateModal";
-// import { CreateModal } from "./components/CreateModal";
+import { UpdateDrawer } from "./components/UpdateDrawer";
+import { CreateModal } from "./components/CreateModal";
 
 export type { Campus, CampusesAPITypes };
 export default {
@@ -29,12 +29,12 @@ export default {
   schemas,
   hooks: {
     useList,
-    // useUpdateDrawer,
-    // useCreateModal,
+    useCreateModal,
+    useUpdateDrawer,
   },
   components: {
     CampusesTable,
-    // UpdateDrawer,
-    // CreateModal,
+    UpdateDrawer,
+    CreateModal,
   },
 };

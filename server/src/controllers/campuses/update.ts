@@ -23,8 +23,7 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { campusId, name, address, city, createdAt, phone } =
-    req.body;
+  const { campusId, name, address, city, createdAt, phone } = req.body;
   const userAccount = req.user!;
 
   try {
@@ -43,7 +42,9 @@ const handler = async (
       });
 
       if (existingCampus) {
-        throw new NameInUseError(`A campus with name "${name}" already exists.`);
+        throw new NameInUseError(
+          `A campus with name "${name}" already exists.`,
+        );
       }
     }
 
@@ -56,7 +57,7 @@ const handler = async (
           },
         },
       },
-      select: { id: true, level: true },
+      select: { id: true },
     });
 
     if (!campusToUpdate) {

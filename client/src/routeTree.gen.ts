@@ -33,7 +33,10 @@ import { Route as ErrorsOfflineRouteImport } from './routes/errors/offline'
 import { Route as Errors404RouteImport } from './routes/errors/404'
 import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AdminPeriodsRouteImport } from './routes/admin/periods'
 import { Route as AdminLogsRouteImport } from './routes/admin/logs'
+import { Route as AdminFacultiesRouteImport } from './routes/admin/faculties'
+import { Route as AdminCoursesRouteImport } from './routes/admin/courses'
 import { Route as AdminConfigRouteImport } from './routes/admin/config'
 import { Route as AdminCampusesRouteImport } from './routes/admin/campuses'
 import { Route as AdminAccountsIndexRouteImport } from './routes/admin/accounts/index'
@@ -159,9 +162,24 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPeriodsRoute = AdminPeriodsRouteImport.update({
+  id: '/admin/periods',
+  path: '/admin/periods',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLogsRoute = AdminLogsRouteImport.update({
   id: '/admin/logs',
   path: '/admin/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminFacultiesRoute = AdminFacultiesRouteImport.update({
+  id: '/admin/faculties',
+  path: '/admin/faculties',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCoursesRoute = AdminCoursesRouteImport.update({
+  id: '/admin/courses',
+  path: '/admin/courses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminConfigRoute = AdminConfigRouteImport.update({
@@ -189,7 +207,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/campuses': typeof AdminCampusesRoute
   '/admin/config': typeof AdminConfigRoute
+  '/admin/courses': typeof AdminCoursesRoute
+  '/admin/faculties': typeof AdminFacultiesRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/periods': typeof AdminPeriodsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/errors/404': typeof Errors404Route
@@ -220,7 +241,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/campuses': typeof AdminCampusesRoute
   '/admin/config': typeof AdminConfigRoute
+  '/admin/courses': typeof AdminCoursesRoute
+  '/admin/faculties': typeof AdminFacultiesRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/periods': typeof AdminPeriodsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/errors/404': typeof Errors404Route
@@ -252,7 +276,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin/campuses': typeof AdminCampusesRoute
   '/admin/config': typeof AdminConfigRoute
+  '/admin/courses': typeof AdminCoursesRoute
+  '/admin/faculties': typeof AdminFacultiesRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/periods': typeof AdminPeriodsRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/errors/404': typeof Errors404Route
@@ -285,7 +312,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/campuses'
     | '/admin/config'
+    | '/admin/courses'
+    | '/admin/faculties'
     | '/admin/logs'
+    | '/admin/periods'
     | '/auth/login'
     | '/auth/logout'
     | '/errors/404'
@@ -316,7 +346,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/campuses'
     | '/admin/config'
+    | '/admin/courses'
+    | '/admin/faculties'
     | '/admin/logs'
+    | '/admin/periods'
     | '/auth/login'
     | '/auth/logout'
     | '/errors/404'
@@ -347,7 +380,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/campuses'
     | '/admin/config'
+    | '/admin/courses'
+    | '/admin/faculties'
     | '/admin/logs'
+    | '/admin/periods'
     | '/auth/login'
     | '/auth/logout'
     | '/errors/404'
@@ -379,7 +415,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminCampusesRoute: typeof AdminCampusesRoute
   AdminConfigRoute: typeof AdminConfigRoute
+  AdminCoursesRoute: typeof AdminCoursesRoute
+  AdminFacultiesRoute: typeof AdminFacultiesRoute
   AdminLogsRoute: typeof AdminLogsRoute
+  AdminPeriodsRoute: typeof AdminPeriodsRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
   Errors404Route: typeof Errors404Route
@@ -577,11 +616,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/periods': {
+      id: '/admin/periods'
+      path: '/admin/periods'
+      fullPath: '/admin/periods'
+      preLoaderRoute: typeof AdminPeriodsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/logs': {
       id: '/admin/logs'
       path: '/admin/logs'
       fullPath: '/admin/logs'
       preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/faculties': {
+      id: '/admin/faculties'
+      path: '/admin/faculties'
+      fullPath: '/admin/faculties'
+      preLoaderRoute: typeof AdminFacultiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/courses': {
+      id: '/admin/courses'
+      path: '/admin/courses'
+      fullPath: '/admin/courses'
+      preLoaderRoute: typeof AdminCoursesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/config': {
@@ -619,7 +679,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminCampusesRoute: AdminCampusesRoute,
   AdminConfigRoute: AdminConfigRoute,
+  AdminCoursesRoute: AdminCoursesRoute,
+  AdminFacultiesRoute: AdminFacultiesRoute,
   AdminLogsRoute: AdminLogsRoute,
+  AdminPeriodsRoute: AdminPeriodsRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
   Errors404Route: Errors404Route,
