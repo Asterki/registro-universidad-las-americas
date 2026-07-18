@@ -11,6 +11,8 @@ import AdminPageLayout from "../../layouts/Admin";
 import { FaPlus, FaBook } from "react-icons/fa";
 
 import CoursesFeature from "../../features/courses";
+import FacultiesFeature from "../../features/faculties";
+import PeriodsFeature from "../../features/periods";
 
 export const Route = createFileRoute("/admin/courses")({
   component: RouteComponent,
@@ -24,6 +26,9 @@ function RouteComponent() {
 
   const { courses, coursesListState, fetchCourses } =
     CoursesFeature.hooks.useCourseList({});
+
+  const { faculties, fetchFaculties } = FacultiesFeature.hooks.useList({});
+  const { periods, fetchPeriods } = PeriodsFeature.hooks.usePeriodList({});
 
   //#region Create Course
   const {
@@ -97,6 +102,8 @@ function RouteComponent() {
     } else {
       (async () => {
         await fetchCourses({ count: 50, page: 0 });
+        await fetchFaculties({ count: 50, page: 0 });
+        await fetchPeriods({ count: 50, page: 0 });
       })();
     }
   }, [account]);
@@ -109,6 +116,8 @@ function RouteComponent() {
         onCreate={handleCreateCourse}
         state={createCourseModalState}
         setState={setCreateCourseModalState}
+        faculties={faculties.faculties}
+        periods={periods.periods}
       />
 
       <CoursesFeature.components.UpdateCourseDrawer
@@ -116,6 +125,9 @@ function RouteComponent() {
         setState={setUpdateCourseState}
         onClose={closeUpdateCourseDrawer}
         onUpdate={handleUpdateCourse}
+
+        faculties={faculties.faculties}
+        periods={periods.periods}
       />
 
       <Title className="flex items-center gap-2">

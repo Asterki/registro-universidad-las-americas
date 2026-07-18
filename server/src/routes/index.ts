@@ -11,7 +11,7 @@ import AcademicHistoryRouter from "./academic-history.js";
 import RequestsRouter from "./requests.js";
 import CoursesRouter from "./courses.js";
 import CourseInstructorRouter from "./course-instructor.js";
-import PeriodRouter from "./period.js";
+import PeriodsRouter from "./periods.js";
 import AccountProfilesRouter from "./account-profiles.js";
 import CoordinatorRouter from "./coordinator.js";
 import RegistryRouter from "./registry.js";
@@ -29,7 +29,7 @@ export function registerRoutes(app: Express): void {
   app.use("/api/requests", RequestsRouter);
   app.use("/api/courses", CoursesRouter);
   app.use("/api/course-instructor", CourseInstructorRouter);
-  app.use("/api/period", PeriodRouter);
+  app.use("/api/periods", PeriodsRouter);
   app.use("/api/account-profiles", AccountProfilesRouter);
   app.use("/api/coordinator", CoordinatorRouter);
   app.use("/api/registry", RegistryRouter);

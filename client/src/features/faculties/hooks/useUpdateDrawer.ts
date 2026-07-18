@@ -4,7 +4,8 @@ import { App } from "antd";
 import FacultiesFeature from "..";
 import { FacultiesAPITypes } from "..";
 
-export interface UpdateDrawerState extends FacultiesAPITypes.UpdateFacultyRequestBody {
+export interface UpdateDrawerState
+  extends FacultiesAPITypes.UpdateFacultyRequestBody {
   loading: boolean;
   isOpen: boolean;
   name: string;
@@ -36,13 +37,7 @@ export function useUpdateDrawer({ onSuccess }: { onSuccess: () => void }) {
 
       const result = await FacultiesFeature.api.get({
         facultyIds: [facultyId],
-        fields: [
-          "id",
-          "name",
-          "code",
-          "dean",
-          "campusId",
-        ],
+        fields: ["id", "name", "code", "dean", "campusId"],
       });
 
       if (
@@ -80,7 +75,8 @@ export function useUpdateDrawer({ onSuccess }: { onSuccess: () => void }) {
       dean: state.dean,
     };
 
-    const result = FacultiesFeature.schemas.updateFacultySchema.safeParse(values);
+    const result =
+      FacultiesFeature.schemas.updateFacultySchema.safeParse(values);
 
     if (!result.success || !result.data) {
       for (const issue of result.error.issues) {

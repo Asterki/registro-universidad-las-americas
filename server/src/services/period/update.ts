@@ -95,11 +95,11 @@ export async function updatePeriod(
     updatePayload.name = name;
   }
   if (startDate !== undefined) {
-    changes.startDate = startDate.toISOString();
+    changes.startDate = new Date(startDate).toISOString();
     updatePayload.startDate = startDate;
   }
   if (endDate !== undefined) {
-    changes.endDate = endDate.toISOString();
+    changes.endDate = new Date(endDate).toISOString();
     updatePayload.endDate = endDate;
   }
   if (active !== undefined) {

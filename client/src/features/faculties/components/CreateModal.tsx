@@ -1,7 +1,10 @@
-import { Form, Input, Modal } from "antd";
+import { Form, Input, Modal, Select } from "antd";
+import { useEffect } from "react";
 
-import { FaPlus, FaUniversity } from "react-icons/fa";
+import { FaPlus } from "react-icons/fa";
 import { CreateFacultyModalState } from "../hooks/useCreateModal";
+
+import { useList } from "../../campuses/hooks/useList"
 
 type CreateFacultyModalProps = {
   state: CreateFacultyModalState;
@@ -16,6 +19,15 @@ export function CreateModal({
   state,
   setState,
 }: CreateFacultyModalProps) {
+  const { campuses, fetchCampuses } = useList({});
+
+  useEffect(() => {
+    fetchCampuses({
+      count: 50,
+      page: 0,
+    });
+  }, []);
+
   return (
     <Modal
       title="Crear Facultad"
@@ -31,6 +43,22 @@ export function CreateModal({
       okText="Crear Facultad"
     >
       <Form layout="vertical">
+        <Form.Item label="Campus" required>
+          <Select
+            placeholder="Seleccione un campus"
+            value={state.campusId}
+            onChange={(value) =>
+              setState((prev) => ({ ...prev, campusId: value }))
+            }
+          >
+            {campuses.campuses.map((campus) => (
+              <Select.Option key={campus.id} value={campus.id}>
+                {campus.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+
         <Form.Item label="Nombre" required>
           <Input
             placeholder="Ingrese el nombre de la facultad"

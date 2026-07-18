@@ -23,8 +23,7 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { periodId, name, startDate, endDate, active } =
-    req.body;
+  const { periodId, name, startDate, endDate, active } = req.body;
   const userAccount = req.user!;
 
   try {
@@ -43,9 +42,13 @@ const handler = async (
       });
 
       if (existingPeriod) {
-        throw new NameInUseError(`A period with name "${name}" already exists.`);
+        throw new NameInUseError(
+          `A period with name "${name}" already exists.`,
+        );
       }
     }
+
+    console.log(startDate, endDate);
 
     const updatedPeriod = await updatePeriodWithRetry(
       {

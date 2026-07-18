@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { metadataFields, metadataPopulateFields } from "./index.js";
 
-const nameSchema = z.string().min(1, "name-too-short").max(150, "name-too-long");
+const nameSchema = z
+  .string()
+  .min(1, "name-too-short")
+  .max(150, "name-too-long");
 const codeSchema = z.string().min(1, "code-too-short").max(10, "code-too-long");
 const deanSchema = z.string().max(150, "dean-too-long").optional();
 
@@ -35,7 +38,9 @@ export const restoreFacultySchema = z.object({
 export const getFacultySchema = z.object({
   facultyIds: z.array(z.cuid()),
   fields: z.array(facultyFields).optional(),
-  populate: z.array(z.enum(metadataPopulateFields, "invalid-populate-path")).optional(),
+  populate: z
+    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
+    .optional(),
 });
 
 export const listFacultiesSchema = z.object({
@@ -43,10 +48,14 @@ export const listFacultiesSchema = z.object({
   page: z.number().min(0, "page-too-low"),
   includeDeleted: z.boolean().optional(),
   campusId: z.cuid("invalid-campus-id").optional(),
-  search: z.object({
-    query: z.string().min(1, "query-too-short"),
-    searchIn: z.array(z.enum(["name", "code"], "invalid-search-field")),
-  }).optional(),
+  search: z
+    .object({
+      query: z.string().min(1, "query-too-short"),
+      searchIn: z.array(z.enum(["name", "code"], "invalid-search-field")),
+    })
+    .optional(),
   fields: z.array(facultyFields).optional(),
-  populate: z.array(z.enum(metadataPopulateFields, "invalid-populate-path")).optional(),
+  populate: z
+    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
+    .optional(),
 });
