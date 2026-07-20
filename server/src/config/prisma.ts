@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import path from "path";
 import setupServer from "../setup.js";
+import demoFile from "../demo.js";
 
 const envFile =
   process.env.NODE_ENV === "production" ? "../.env.prod" : "../.env.dev";

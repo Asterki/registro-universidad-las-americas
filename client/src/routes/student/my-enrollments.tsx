@@ -24,7 +24,9 @@ function RouteComponent() {
 
   useEffect(() => {
     if (account) {
-      fetchEnrollments({});
+      fetchEnrollments({
+
+      });
     }
   }, [account]);
 

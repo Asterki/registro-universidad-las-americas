@@ -11,5 +11,7 @@ export type ISessionAccount = {
   data: {
     role: Omit<IAccountRole, "metadata">; // Exclude metadata from role in session for performance and security reasons, as it's not needed in the session
     status: "active" | "inactive";
+    facultyId: string;
+    campusId: string;
   };
 };

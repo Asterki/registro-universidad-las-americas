@@ -28,6 +28,8 @@ export function MyEnrollmentsTable({
     pending: "Pendiente",
   };
 
+  console.log("Enrollments:", enrollments); // Debugging line
+
   return (
     <div className="mt-4">
       <Table
@@ -60,8 +62,8 @@ export function MyEnrollmentsTable({
           },
           {
             title: "Fecha de Matrícula",
-            key: "createdAt",
-            dataIndex: "createdAt",
+            key: "registeredAt",
+            dataIndex: "registeredAt",
             render: (date: string) =>
               date ? new Date(date).toLocaleDateString("es-ES") : "-",
           },

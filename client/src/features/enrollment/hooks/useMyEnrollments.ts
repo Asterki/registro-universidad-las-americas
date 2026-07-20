@@ -13,7 +13,9 @@ export function useMyEnrollments() {
     async (data: { periodId?: string } = {}) => {
       setLoading(true);
 
-      const result = await enrollmentApi.listMy(data);
+      const result = await enrollmentApi.listMy({
+        periodId: data.periodId,
+      });
 
       if (result.status === "success") {
         setEnrollments(result.enrollments || []);

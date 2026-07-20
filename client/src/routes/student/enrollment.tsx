@@ -8,9 +8,11 @@ import { App, Typography } from "antd";
 const { Title, Text } = Typography;
 
 import StudentLayout from "../../layouts/Student";
+import { FaClipboardList } from "react-icons/fa";
+
 import EnrollmentFeature from "../../features/enrollment";
 import CoursesFeature from "../../features/courses";
-import { FaClipboardList } from "react-icons/fa";
+import PeriodsFeature from "../../features/periods";
 
 export const Route = createFileRoute("/student/enrollment")({
   component: RouteComponent,
@@ -21,18 +23,37 @@ function RouteComponent() {
   const { message } = App.useApp();
 
   const { loading, enroll } = EnrollmentFeature.hooks.useEnrollSelf();
-  const { courses, loading: coursesLoading, fetchCourses } =
-    CoursesFeature.hooks.useAvailableCourses();
+  const {
+    courses,
+    loading: coursesLoading,
+    fetchCourses,
+  } = CoursesFeature.hooks.useAvailableCourses();
 
-  const [periods] = useState<{ id: string; name: string }[]>([
-    // Periods will come from a period API in production
-  ]);
+  const { periods, fetchPeriods } = PeriodsFeature.hooks.usePeriodList({});
 
   useEffect(() => {
     if (account) {
-      fetchCourses({});
+      if (!account.data.facultyId || !account.data.campusId) {
+        message.error(
+          "Para poder matricularse a clases, primero debes de estar matriculado a la universidad.",
+        );
+        return;
+      }
+
+      fetchPeriods({
+        active: true,
+      });
     }
   }, [account]);
+
+  useEffect(() => {
+    if (account && periods.periods.length > 0) {
+      fetchCourses({
+        facultyId: account.data.facultyId,
+        periodId: periods.periods[0]?.id,
+      });
+    }
+  }, [account, periods.periods]);
 
   return (
     <StudentLayout selectedPage="enrollment">
@@ -49,12 +70,8 @@ function RouteComponent() {
 
       {account && (
         <EnrollmentFeature.components.EnrollSelfForm
-          periods={periods}
-          courses={courses.map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            code: c.code,
-          }))}
+          periods={periods.periods}
+          courses={courses}
           onEnroll={enroll}
           loading={loading || coursesLoading}
         />

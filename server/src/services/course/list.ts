@@ -1,11 +1,7 @@
 import { performance } from "perf_hooks";
 
 import prismaClient from "../../config/prisma.js";
-import {
-  Account,
-  Course,
-  Prisma,
-} from "@prisma/client";
+import { Account, Course, Prisma } from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
 

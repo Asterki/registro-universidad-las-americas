@@ -174,7 +174,12 @@ export async function enrollStudent(
     });
 
     if (existing) {
-      throw new EnrollmentDuplicateError();
+      // Delete the existing enrollment if it exists, to allow re-enrollment
+      await prismaClient.enrollment.delete({
+        where: {
+          id: existing.id,
+        },
+      });
     }
 
     const enrollment = await createEnrollmentRecord(

@@ -69,6 +69,24 @@ export async function listEnrollmentsByAccount(
         skip,
         take: limit,
         orderBy: { registeredAt: "desc" },
+        select: {
+          course: {
+            select: {
+              name: true,
+              code: true,
+            },
+          },
+          period: {
+            select: {
+              name: true,
+              startDate: true,
+              endDate: true,
+            },
+          },
+          status: true,
+          registeredAt: true,
+          cancelledAt: true,
+        },
       }),
       prismaClient.enrollment.count({ where }),
     ]);
@@ -94,7 +112,7 @@ export async function listEnrollmentsByAccount(
     });
 
     return {
-      enrollments,
+      enrollments: enrollments as any,
       total,
       page,
       limit,
@@ -109,8 +127,6 @@ export async function listEnrollmentsByCourse(
   params: ListEnrollmentsByCourseParameters,
   options: ListEnrollmentsOptions = {},
 ): Promise<EnrollmentsListResult> {
-  const startTime = performance.now();
-
   const { courseId, status, accountId } = params;
   const page = options.page ?? 1;
   const limit = options.limit ?? 50;
@@ -134,6 +150,8 @@ export async function listEnrollmentsByCourse(
         take: limit,
         orderBy: { registeredAt: "desc" },
         include: {
+          course: true,
+          period: true,
           account: {
             select: {
               id: true,
@@ -147,25 +165,7 @@ export async function listEnrollmentsByCourse(
       prismaClient.enrollment.count({ where }),
     ]);
 
-    const duration = Number((performance.now() - startTime).toFixed(3));
-
-    LoggingService.log({
-      source: "services:enrollment:list-by-course",
-      level: "info",
-      message: "Listed enrollments by course",
-      traceId: options.traceId,
-      duration,
-      details: {
-        courseId,
-        total,
-        page,
-        limit,
-        filters: { status, accountId },
-      },
-      _references: {
-        courseId: "Course",
-      },
-    });
+    console.log(enrollments);
 
     return {
       enrollments,

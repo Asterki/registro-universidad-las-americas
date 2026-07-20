@@ -23,7 +23,8 @@ const createSessionAccount = async (
       value: account.email,
     },
     data: {
-      campus: account.campus,
+      campusId: account.campusId ?? "not-set", // Default value if campusId is not set
+      facultyId: account.facultyId ?? "not-set", // Default value if facultyId is not set
       role: {
         ...role,
         permissions:

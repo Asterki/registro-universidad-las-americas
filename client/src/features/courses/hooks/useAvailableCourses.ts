@@ -19,7 +19,9 @@ export function useAvailableCourses() {
         return;
       }
 
-      const result = await coursesApi.listAvailable({ periodId: data.periodId });
+      const result = await coursesApi.listAvailable({
+        periodId: data.periodId,
+      });
 
       if (result.status === "success") {
         setCourses(result.courses || []);
