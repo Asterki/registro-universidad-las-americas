@@ -10,6 +10,14 @@ type ListAccount = {
   name: string;
   email: string;
   status: string;
+  campus: {
+    id: string;
+    name: string;
+  };
+  faculty: {
+    id: string;
+    name: string;
+  };
   role: {
     id: string;
     name: string;

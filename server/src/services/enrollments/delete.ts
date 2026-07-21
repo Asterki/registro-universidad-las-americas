@@ -4,7 +4,7 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  AccountRole,
+  Enrollment,
   MetadataSource,
   MetadataStatus,
   Prisma,
@@ -14,30 +14,29 @@ type MetadataUpdateHistoryCreateWithoutMetadataInput =
 
 import LoggingService from "../../services/logging.js";
 
-type DeleteAccountRoleOptions = {
+type DeleteEnrollmentOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class EnrollmentNotFoundError extends Error {
   retryable = false;
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "EnrollmentNotFoundError";
   }
 }
 
-export async function deleteAccountRole(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deleteEnrollment(
+  enrollmentId: string,
+  options: DeleteEnrollmentOptions = {},
+): Promise<Enrollment> {
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch role with metadata + updateHistory
-  const existingRole = await prismaClient.accountRole.findUnique({
+  const existingEnrollment = await prismaClient.enrollment.findUnique({
     where: {
-      id: roleId,
+      id: enrollmentId,
       metadata: {
         is: {
           deleted: false,
@@ -53,9 +52,9 @@ export async function deleteAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError(
-      "Account role not found or already deleted",
+  if (!existingEnrollment) {
+    throw new EnrollmentNotFoundError(
+      "Enrollment not found or already deleted",
     );
   }
 
@@ -79,13 +78,11 @@ export async function deleteAccountRole(
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.AccountRoleUpdateInput;
+  let updatePayload: Prisma.EnrollmentUpdateInput;
 
-  // Update the metadata
-  if (existingRole.metadata) {
+  if (existingEnrollment.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
     updatePayload = {
       metadata: {
         create: {
@@ -107,9 +104,8 @@ export async function deleteAccountRole(
     };
   }
 
-  // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.accountRole.update({
-    where: { id: roleId },
+  const deleted = await prismaClient.enrollment.update({
+    where: { id: enrollmentId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -117,18 +113,18 @@ export async function deleteAccountRole(
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:account-roles:delete",
+    source: "services:enrollment:delete",
     level: "important",
-    message: "Account role deleted",
+    message: "Enrollment deleted",
     traceId: options.traceId,
     details: {
-      accountRoleId: String(deleted.id),
-      name: deleted.name,
+      enrollmentId: String(deleted.id),
+      accountId: deleted.accountId,
       ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
-      accountRoleId: "AccountRole",
+      enrollmentId: "Enrollment",
       ...(userAccountId !== null ? { deletedBy: "Account" } : {}),
     },
   });
@@ -136,26 +132,27 @@ export async function deleteAccountRole(
   return deleted;
 }
 
-export async function deleteAccountRoleWithRetry(
-  roleId: string,
-  options: DeleteAccountRoleOptions = {},
-): Promise<AccountRole> {
+export async function deleteEnrollmentWithRetry(
+  enrollmentId: string,
+  options: DeleteEnrollmentOptions = {},
+): Promise<Enrollment> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await deleteAccountRole(roleId, options);
+        return await deleteEnrollment(enrollmentId, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof EnrollmentNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({
-          source: "services:account-roles:delete:retry",
+          source: "services:enrollment:delete:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role deletion (attempt ${attempt})`,
+          message: `Retryable error during enrollment deletion (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

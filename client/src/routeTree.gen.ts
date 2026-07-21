@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentIndexRouteImport } from './routes/student/index'
+import { Route as RegistryIndexRouteImport } from './routes/registry/index'
 import { Route as InstructorIndexRouteImport } from './routes/instructor/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as StudentProfileRouteImport } from './routes/student/profile'
@@ -50,6 +51,11 @@ const IndexRoute = IndexRouteImport.update({
 const StudentIndexRoute = StudentIndexRouteImport.update({
   id: '/student/',
   path: '/student/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistryIndexRoute = RegistryIndexRouteImport.update({
+  id: '/registry/',
+  path: '/registry/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstructorIndexRoute = InstructorIndexRouteImport.update({
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/student/profile': typeof StudentProfileRoute
   '/admin': typeof AdminIndexRoute
   '/instructor': typeof InstructorIndexRoute
+  '/registry': typeof RegistryIndexRoute
   '/student': typeof StudentIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts': typeof AdminAccountsIndexRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByTo {
   '/student/profile': typeof StudentProfileRoute
   '/admin': typeof AdminIndexRoute
   '/instructor': typeof InstructorIndexRoute
+  '/registry': typeof RegistryIndexRoute
   '/student': typeof StudentIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts': typeof AdminAccountsIndexRoute
@@ -302,6 +310,7 @@ export interface FileRoutesById {
   '/student/profile': typeof StudentProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/instructor/': typeof InstructorIndexRoute
+  '/registry/': typeof RegistryIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/accounts/roles': typeof AdminAccountsRolesRoute
   '/admin/accounts/': typeof AdminAccountsIndexRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/student/profile'
     | '/admin'
     | '/instructor'
+    | '/registry'
     | '/student'
     | '/admin/accounts/roles'
     | '/admin/accounts'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/student/profile'
     | '/admin'
     | '/instructor'
+    | '/registry'
     | '/student'
     | '/admin/accounts/roles'
     | '/admin/accounts'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/student/profile'
     | '/admin/'
     | '/instructor/'
+    | '/registry/'
     | '/student/'
     | '/admin/accounts/roles'
     | '/admin/accounts/'
@@ -441,6 +453,7 @@ export interface RootRouteChildren {
   StudentProfileRoute: typeof StudentProfileRoute
   AdminIndexRoute: typeof AdminIndexRoute
   InstructorIndexRoute: typeof InstructorIndexRoute
+  RegistryIndexRoute: typeof RegistryIndexRoute
   StudentIndexRoute: typeof StudentIndexRoute
   AdminAccountsRolesRoute: typeof AdminAccountsRolesRoute
   AdminAccountsIndexRoute: typeof AdminAccountsIndexRoute
@@ -460,6 +473,13 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof StudentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registry/': {
+      id: '/registry/'
+      path: '/registry'
+      fullPath: '/registry'
+      preLoaderRoute: typeof RegistryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/instructor/': {
@@ -705,6 +725,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudentProfileRoute: StudentProfileRoute,
   AdminIndexRoute: AdminIndexRoute,
   InstructorIndexRoute: InstructorIndexRoute,
+  RegistryIndexRoute: RegistryIndexRoute,
   StudentIndexRoute: StudentIndexRoute,
   AdminAccountsRolesRoute: AdminAccountsRolesRoute,
   AdminAccountsIndexRoute: AdminAccountsIndexRoute,

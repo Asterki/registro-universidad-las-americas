@@ -3,13 +3,15 @@ import { Request, Response, NextFunction } from "express";
 import * as CourseInstructorAPITypes from "../../../../shared/api/course-instructor.js";
 
 import LoggingService from "../../services/logging.js";
-import {
-  activateAssignment,
-  CourseInstructorAssignmentNotFoundError,
-} from "../../services/course-instructor/status.js";
-
 import prismaClient from "../../config/prisma.js";
 import { Prisma } from "@prisma/client";
+
+class AssignmentNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AssignmentNotFoundError";
+  }
+}
 
 const handler = async (
   req: Request<{}, {}, CourseInstructorAPITypes.ActivateInstructorAssignmentRequestBody>,
@@ -17,32 +19,30 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { courseInstructorId } = req.body;
+  const { courseId, accountId } = req.body;
   const userAccount = req.user!;
 
   try {
-    // Look up the assignment to get courseId and accountId
-    const assignment = await prismaClient.courseInstructor.findUnique({
-      where: { id: courseInstructorId },
-      select: { courseId: true, accountId: true },
+    // Verify the course exists and instructor is assigned
+    const course = await prismaClient.course.findUnique({
+      where: { id: courseId },
+      include: { instructors: { where: { id: accountId }, select: { id: true } } },
     });
 
-    if (!assignment) {
-      res.status(404).json({
-        status: "assignment-not-found",
-      });
-      return;
+    if (!course) {
+      throw new AssignmentNotFoundError("Course not found");
     }
 
-    const { courseId, accountId } = assignment;
+    if (course.instructors.length === 0) {
+      throw new AssignmentNotFoundError("Instructor not assigned to this course");
+    }
 
-    const updated = await activateAssignment(
-      { courseId, accountId },
-      {
-        userAccount,
-        traceId: req.traceId,
-      },
-    );
+    // Already active — this is a no-op in the implicit relation since
+    // there's no separate activation state. Just return success.
+    const updatedCourse = await prismaClient.course.findUnique({
+      where: { id: courseId },
+      include: { instructors: true },
+    });
 
     const duration = performance.now() - start;
 
@@ -53,12 +53,10 @@ const handler = async (
       traceId: req.traceId,
       duration,
       details: {
-        courseInstructorId: updated.id,
         courseId,
         accountId,
       },
       _references: {
-        courseInstructorId: "CourseInstructor",
         courseId: "Course",
         accountId: "Account",
       },
@@ -66,12 +64,12 @@ const handler = async (
 
     res.status(200).json({
       status: "success",
-      assignment: updated,
+      course: updatedCourse!,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;
 
-    if (error instanceof CourseInstructorAssignmentNotFoundError) {
+    if (error instanceof AssignmentNotFoundError) {
       res.status(404).json({
         status: "assignment-not-found",
       });

@@ -1,14 +1,21 @@
 import { ResponseStatus } from "./index.js";
-import { z } from "zod";
-import {
-  getCoordinatorFacultyScopeSchema,
-  listCoordinatorCoursesSchema,
-  listCoordinatorStudentsSchema,
-} from "../schemas/coordinator.js";
 
-export type GetCoordinatorFacultyScopeRequestBody = z.infer<typeof getCoordinatorFacultyScopeSchema>;
-export type ListCoordinatorCoursesRequestBody = z.infer<typeof listCoordinatorCoursesSchema>;
-export type ListCoordinatorStudentsRequestBody = z.infer<typeof listCoordinatorStudentsSchema>;
+export interface GetCoordinatorFacultyScopeRequestBody {
+  coordinatorId?: string;
+}
+
+export interface ListCoordinatorCoursesRequestBody {
+  coordinatorId?: string;
+  count?: number;
+  page?: number;
+}
+
+export interface ListCoordinatorStudentsRequestBody {
+  coordinatorId?: string;
+  courseId?: string;
+  count?: number;
+  page?: number;
+}
 
 export interface CoordinatorScopeResponse {
   status: ResponseStatus | "not-coordinator";

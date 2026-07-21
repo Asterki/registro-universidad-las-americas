@@ -7,6 +7,8 @@ import { FaUser, FaPlus } from "react-icons/fa";
 
 import AccountsFeature from "../../../features/accounts";
 import AccountRolesFeature from "../../../features/roles";
+import CampusesFeature from "../../../features/campuses";
+import FacultiesFeature from "../../../features/faculties";
 
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
@@ -37,6 +39,10 @@ function RouteComponent() {
 
   const { accountRoles, fetchAccountRoles } =
     AccountRolesFeature.hooks.useList({});
+
+  const { campuses, fetchCampuses } = CampusesFeature.hooks.useList({});
+
+  const { faculties, fetchFaculties } = FacultiesFeature.hooks.useList({});
 
   //#region Create Account
   const {
@@ -129,6 +135,8 @@ function RouteComponent() {
       (async () => {
         await fetchAccounts({ count: 50, page: 0 });
         await fetchAccountRoles({ count: 50, page: 0 });
+        await fetchCampuses({ count: 50, page: 0 });
+        await fetchFaculties({ count: 50, page: 0 });
       })();
     }
   }, [account]);
@@ -163,6 +171,8 @@ function RouteComponent() {
         state={updateModalState}
         setState={setUpdateModalState}
         accountRoles={accountRoles.accountRoles}
+        campuses={campuses.campuses}
+        faculties={faculties.faculties}
       />
 
       <div className="mb-2">
@@ -258,6 +268,8 @@ function RouteComponent() {
             openUpdateStatusModal(acc.id);
           }}
           accountRoles={accountRoles.accountRoles}
+          campuses={campuses.campuses}
+          faculties={faculties.faculties}
         />
       )}
 

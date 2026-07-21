@@ -2,19 +2,16 @@ import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 import {
   listPeriodsSchema,
-  getActivePeriodSchema,
-  getPeriodDetailSchema,
+  getPeriodSchema,
   createPeriodSchema,
   updatePeriodSchema,
   deletePeriodSchema,
   restorePeriodSchema,
-  listAllPeriodsSchema,
-  getPeriodSchema,
 } from "../schemas/period.js";
 
 export type ListPeriodsRequestBody = z.infer<typeof listPeriodsSchema>;
-export type GetActivePeriodRequestBody = z.infer<typeof getActivePeriodSchema>;
-export type GetPeriodDetailRequestBody = z.infer<typeof getPeriodDetailSchema>;
+export type GetActivePeriodRequestBody = z.infer<typeof getPeriodSchema>;
+export type GetPeriodDetailRequestBody = z.infer<typeof getPeriodSchema>;
 
 export interface ListPeriodsResponse {
   status: ResponseStatus;
@@ -31,7 +28,7 @@ export type CreatePeriodRequestBody = z.infer<typeof createPeriodSchema>;
 export type UpdatePeriodRequestBody = z.infer<typeof updatePeriodSchema>;
 export type DeletePeriodRequestBody = z.infer<typeof deletePeriodSchema>;
 export type RestorePeriodRequestBody = z.infer<typeof restorePeriodSchema>;
-export type ListAllPeriodsRequestBody = z.infer<typeof listAllPeriodsSchema>;
+export type ListAllPeriodsRequestBody = z.infer<typeof listPeriodsSchema>;
 export type GetPeriodRequestBody = z.infer<typeof getPeriodSchema>;
 
 export interface CreatePeriodResponseData {

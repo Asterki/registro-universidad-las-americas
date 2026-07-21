@@ -30,6 +30,8 @@ export interface GetResponseData {
     include: {
       metadata: true;
       role: true;
+      campus: true;
+      faculty: true;
     };
   }>[];
 }
@@ -40,6 +42,8 @@ export interface ListResponseData {
     include: {
       metadata: true;
       role: true;
+      campus: true;
+      faculty: true;
     };
   }>[];
   totalAccounts?: number;

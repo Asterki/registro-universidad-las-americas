@@ -30,6 +30,9 @@ const router = express.Router();
 // Apply global auth middleware
 router.use(ensureAuthenticated);
 
+//#region ─── Account Roles Routes ───
+
+// ─── Admin ───
 // Create role
 router.post(
   "/create",
@@ -67,5 +70,7 @@ router.post("/get", validateRequestBody(getSchema), getHandler);
 
 // List roles
 router.post("/list", validateRequestBody(listSchema), listHandler);
+
+//#endregion
 
 export default router;

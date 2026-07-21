@@ -1,9 +1,17 @@
 import { Request, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
 
 import * as CoordinatorAPITypes from "../../../../shared/api/coordinator.js";
 
 import LoggingService from "../../services/logging.js";
-import { listCoordinatorCourses, CoordinatorNotFoundError } from "../../services/coordinator/courses.js";
+import prismaClient from "../../config/prisma.js";
+
+class CoordinatorNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CoordinatorNotFoundError";
+  }
+}
 
 const handler = async (
   req: Request<{}, {}, CoordinatorAPITypes.ListCoordinatorCoursesRequestBody>,
@@ -15,13 +23,41 @@ const handler = async (
   try {
     const userAccount = req.user!;
 
-    const courses = await listCoordinatorCourses(
-      { accountId: (userAccount as any).id },
-      {
-        traceId: req.traceId,
-        userAccount,
+    // Get the coordinator's faculty
+    const account = await prismaClient.account.findUnique({
+      where: { id: userAccount.id },
+      include: {
+        facultiesCoordinated: {
+          select: { id: true },
+        },
       },
-    );
+    });
+
+    if (!account || account.facultiesCoordinated.length === 0) {
+      throw new CoordinatorNotFoundError("Account is not a coordinator");
+    }
+
+    const facultyId = account.facultiesCoordinated[0].id;
+
+    // Query courses filtered by the coordinator's faculty
+    const courses = await prismaClient.course.findMany({
+      where: {
+        facultyId,
+        metadata: {
+          is: {
+            deleted: false,
+          },
+        },
+      },
+      include: {
+        instructors: true,
+        period: true,
+        faculty: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
 
     const duration = performance.now() - start;
 
@@ -32,7 +68,7 @@ const handler = async (
       traceId: req.traceId,
       duration,
       details: {
-        accountId: (userAccount as any).id,
+        accountId: userAccount.id,
         count: courses.length,
       },
     });

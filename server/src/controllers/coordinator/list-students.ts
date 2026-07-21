@@ -1,9 +1,17 @@
 import { Request, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
 
 import * as CoordinatorAPITypes from "../../../../shared/api/coordinator.js";
 
 import LoggingService from "../../services/logging.js";
-import { listCoordinatorStudents, CoordinatorNotFoundError } from "../../services/coordinator/students.js";
+import prismaClient from "../../config/prisma.js";
+
+class CoordinatorNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CoordinatorNotFoundError";
+  }
+}
 
 const handler = async (
   req: Request<{}, {}, CoordinatorAPITypes.ListCoordinatorStudentsRequestBody>,
@@ -14,15 +22,48 @@ const handler = async (
 
   try {
     const userAccount = req.user!;
-    const { page, count } = req.body;
+    const { page = 0, count = 20 } = req.body;
 
-    const result = await listCoordinatorStudents(
-      { accountId: (userAccount as any).id, page, limit: count },
-      {
-        traceId: req.traceId,
-        userAccount,
+    // Get the coordinator's faculty
+    const account = await prismaClient.account.findUnique({
+      where: { id: userAccount.id },
+      include: {
+        facultiesCoordinated: {
+          select: { id: true },
+        },
       },
-    );
+    });
+
+    if (!account || account.facultiesCoordinated.length === 0) {
+      throw new CoordinatorNotFoundError("Account is not a coordinator");
+    }
+
+    const facultyId = account.facultiesCoordinated[0].id;
+
+    // Query accounts where faculty matches coordinator's faculty and role is student
+    const where: Prisma.AccountWhereInput = {
+      facultyId,
+      role: {
+        name: "student",
+      },
+      metadata: {
+        is: {
+          deleted: false,
+        },
+      },
+    };
+
+    const [data, total] = await Promise.all([
+      prismaClient.account.findMany({
+        where,
+        skip: page * count,
+        take: count,
+        orderBy: {
+          name: "asc",
+        },
+      }),
+      prismaClient.account.count({ where }),
+    ]);
 
     const duration = performance.now() - start;
 
@@ -33,17 +74,17 @@ const handler = async (
       traceId: req.traceId,
       duration,
       details: {
-        accountId: (userAccount as any).id,
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
+        accountId: userAccount.id,
+        page,
+        limit: count,
+        total,
       },
     });
 
     res.status(200).json({
       status: "success",
-      students: result.data,
-      total: result.total,
+      students: data,
+      total,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;

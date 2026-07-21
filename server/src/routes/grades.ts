@@ -1,16 +1,19 @@
 import express from "express";
 
 // Controllers
-import recordHandler from "../controllers/grades/record.js";
-import updateHandler from "../controllers/grades/update.js";
-import deleteHandler from "../controllers/grades/delete.js";
-import listMyHandler from "../controllers/grades/list-my.js";
-import listStudentHandler from "../controllers/grades/list-student.js";
-import listCourseHandler from "../controllers/grades/list-course.js";
-import listFacultyHandler from "../controllers/grades/list-faculty.js";
-import detailHandler from "../controllers/grades/detail.js";
-import publishHandler from "../controllers/grades/publish.js";
-import bulkHandler from "../controllers/grades/bulk.js";
+import recordHandler from "../controllers/grades/instructor/create.js";
+import updateHandler from "../controllers/grades/instructor/update.js";
+
+import deleteHandler from "../controllers/grades/admin/delete.js";
+import listCourseHandler from "../controllers/grades/instructor/list-course.js";
+import bulkHandler from "../controllers/grades/instructor/bulk.js";
+import listFacultyHandler from "../controllers/grades/admin/list-course.js";
+
+import listStudentHandler from "../controllers/grades/admin/list-student.js";
+import listMyHandler from "../controllers/grades/student/list-my.js";
+
+import detailHandler from "../controllers/grades/admin/list-course.js";
+import publishHandler from "../controllers/grades/admin/publish.js";
 
 // Middleware
 import { validateRequestBody } from "../middleware/validationMiddleware.js";
@@ -21,16 +24,11 @@ import {
 
 // Schemas
 import {
-  recordGradeSchema,
+  createGradeSchema,
   updateGradeSchema,
   deleteGradeSchema,
-  listMyGradesSchema,
-  listStudentGradesSchema,
-  listCourseGradesSchema,
-  listFacultyGradesSchema,
-  getGradeDetailSchema,
-  publishFinalGradeSchema,
-  bulkRecordGradesSchema,
+  listGradesSchema,
+  getGradeSchema,
 } from "@shared/schemas/grades.js";
 
 const router = express.Router();
@@ -38,11 +36,14 @@ const router = express.Router();
 // Apply global auth middleware
 router.use(ensureAuthenticated);
 
+//#region ─── Grades Routes ───
+
+// ─── Instructor ───
 // Record grade
 router.post(
   "/record",
   ensurePermissions(["grades:record"]),
-  validateRequestBody(recordGradeSchema),
+  validateRequestBody(createGradeSchema),
   recordHandler,
 );
 
@@ -54,6 +55,7 @@ router.post(
   updateHandler,
 );
 
+// ─── Admin ───
 // Delete grade
 router.post(
   "/delete",
@@ -62,34 +64,34 @@ router.post(
   deleteHandler,
 );
 
+// ─── Student ───
 // List my grades
-router.post(
-  "/list/my",
-  validateRequestBody(listMyGradesSchema),
-  listMyHandler,
-);
+router.post("/list/my", validateRequestBody(listGradesSchema), listMyHandler);
 
+// ─── Admin ───
 // List student grades
 router.post(
   "/list/student",
   ensurePermissions(["grades:list-student"]),
-  validateRequestBody(listStudentGradesSchema),
+  validateRequestBody(listGradesSchema),
   listStudentHandler,
 );
 
+// ─── Instructor ───
 // List course grades
 router.post(
   "/list/course",
   ensurePermissions(["grades:list-course"]),
-  validateRequestBody(listCourseGradesSchema),
+  validateRequestBody(listGradesSchema),
   listCourseHandler,
 );
 
+// ─── Admin ───
 // List faculty grades
 router.post(
   "/list/faculty",
   ensurePermissions(["grades:list-faculty"]),
-  validateRequestBody(listFacultyGradesSchema),
+  validateRequestBody(listGradesSchema),
   listFacultyHandler,
 );
 
@@ -97,7 +99,7 @@ router.post(
 router.post(
   "/detail",
   ensurePermissions(["grades:detail"]),
-  validateRequestBody(getGradeDetailSchema),
+  validateRequestBody(getGradeSchema),
   detailHandler,
 );
 
@@ -105,16 +107,18 @@ router.post(
 router.post(
   "/final/publish",
   ensurePermissions(["grades:publish-final"]),
-  validateRequestBody(publishFinalGradeSchema),
+  validateRequestBody(createGradeSchema),
   publishHandler,
 );
 
+// ─── Instructor ───
 // Bulk record grades
 router.post(
   "/record/bulk",
   ensurePermissions(["grades:bulk-record"]),
-  validateRequestBody(bulkRecordGradesSchema),
+  validateRequestBody(createGradeSchema),
   bulkHandler,
 );
+//#endregion
 
 export default router;

@@ -14,9 +14,17 @@ import { loginAccountSchema } from "@shared/schemas/auth.js";
 
 const router = express.Router();
 
-// Account access
+//#region ─── Auth Routes ───
+
+// ─── Public ───
+
+// Account login
 router.post("/login", [validateRequestBody(loginAccountSchema)], accountsLogin);
+// ─── Authenticated ───
+
 router.post("/logout", [ensureAuthenticated], accountsLogout);
 router.get("/fetch", [ensureAuthenticated], accountsFetch);
+
+//#endregion
 
 export default router;

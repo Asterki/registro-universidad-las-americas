@@ -25,7 +25,8 @@ export function useUpdateModal({ onSuccess }: { onSuccess: () => void }) {
     name: "",
     email: "",
     roleId: "",
-    campus: "COMAYAGUA",
+    campusId: "",
+    facultyId: "",
   };
   const [state, setState] = useState<UpdateDrawerState>(defaultState);
 
@@ -38,9 +39,11 @@ export function useUpdateModal({ onSuccess }: { onSuccess: () => void }) {
 
     const result = await AccountsFeature.api.get({
       accountIds: [accountId],
-      fields: ["id", "name", "email", "role", "campus"],
-      populate: ["role"],
+      fields: ["id", "name", "email", "role", "campus", "faculty"],
+      populate: ["role", "campus", "faculty"],
     });
+
+    console.log(result);
     if (
       result.status === "success" &&
       result.accounts &&
@@ -54,8 +57,9 @@ export function useUpdateModal({ onSuccess }: { onSuccess: () => void }) {
         accountId: account.id,
         name: account.name,
         email: account.email,
-        roleId: account.roleId,
-        campus: account.campus,
+        roleId: account.role.id,
+        campusId: account.campus?.id || "",
+        facultyId: account.faculty?.id || "",
       }));
     }
   }, []);

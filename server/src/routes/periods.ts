@@ -1,17 +1,12 @@
 import express from "express";
 
-// Controllers
-import listHandler from "../controllers/period/list.js";
-import getActiveHandler from "../controllers/period/get-active.js";
-import detailHandler from "../controllers/period/detail.js";
-
 // CRUD Controllers
-import createPeriodHandler from "../controllers/period/create.js";
-import updatePeriodHandler from "../controllers/period/update.js";
-import deletePeriodHandler from "../controllers/period/delete.js";
-import restorePeriodHandler from "../controllers/period/restore.js";
-import listAllPeriodsHandler from "../controllers/period/list.js";
-import getPeriodHandler from "../controllers/period/get.js";
+import createPeriodHandler from "../controllers/periods/admin/create.js";
+import updatePeriodHandler from "../controllers/periods/admin/update.js";
+import deletePeriodHandler from "../controllers/periods/admin/delete.js";
+import restorePeriodHandler from "../controllers/periods/admin/restore.js";
+import listHandler from "../controllers/periods/admin/list.js";
+import getPeriodHandler from "../controllers/periods/admin/get.js";
 
 // Middleware
 import { validateRequestBody } from "../middleware/validationMiddleware.js";
@@ -20,20 +15,13 @@ import {
   ensurePermissions,
 } from "../middleware/authMiddleware.js";
 
-// Schemas
-import {
-  listPeriodsSchema,
-  getActivePeriodSchema,
-  getPeriodDetailSchema,
-} from "@shared/schemas/period.js";
-
 // CRUD Schemas
 import {
   createPeriodSchema,
   updatePeriodSchema,
   deletePeriodSchema,
   restorePeriodSchema,
-  listAllPeriodsSchema,
+  listPeriodsSchema,
   getPeriodSchema,
 } from "@shared/schemas/period.js";
 
@@ -42,7 +30,9 @@ const router = express.Router();
 // Apply global auth middleware
 router.use(ensureAuthenticated);
 
-// --- CRUD Routes ---
+//#region ─── Periods Routes ───
+
+// ─── Admin ───
 
 // Create period
 router.post(
@@ -84,16 +74,6 @@ router.post(
   getPeriodHandler,
 );
 
-// List all periods (paginated, filterable)
-router.post(
-  "/list/all",
-  ensurePermissions(["period:list"]),
-  validateRequestBody(listAllPeriodsSchema),
-  listAllPeriodsHandler,
-);
-
-// --- Existing Routes ---
-
 // List periods
 router.post(
   "/list",
@@ -102,20 +82,6 @@ router.post(
   listHandler,
 );
 
-// Get active period
-router.post(
-  "/get/active",
-  ensurePermissions(["period:detail"]),
-  validateRequestBody(getActivePeriodSchema),
-  getActiveHandler,
-);
-
-// Get period detail
-router.post(
-  "/detail",
-  ensurePermissions(["period:detail"]),
-  validateRequestBody(getPeriodDetailSchema),
-  detailHandler,
-);
+//#endregion
 
 export default router;

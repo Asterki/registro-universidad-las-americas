@@ -55,7 +55,7 @@ const setupServer = async () => {
   // 2. Create Primary Admin Account
   await createAccountWithRetry(
     {
-      campus: "COMAYAGUA",
+      campusId: "COMAYAGUA",
       roleId: adminRole.id,
       password: "admin123", // Service will hash this password before saving
       name: "Admin User",

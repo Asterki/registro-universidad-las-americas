@@ -38,6 +38,7 @@ export default function GeneralLayout({ children }: LayoutProps) {
               src="/assets/img/icon.png"
               alt="Logo"
               style={{ width: 42, height: 42, objectFit: "contain" }}
+              className="rounded-full"
             />
             <div className="text-white">
               <h1 style={{ margin: 0 }} className="text-white font-bold text-lg">

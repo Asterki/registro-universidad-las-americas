@@ -3,15 +3,29 @@ import { Request, Response, NextFunction } from "express";
 import * as CourseInstructorAPITypes from "../../../../shared/api/course-instructor.js";
 
 import LoggingService from "../../services/logging.js";
-import {
-  assignInstructorToCourseWithRetry,
-  CourseInstructorExistsError,
-  CourseNotFoundError,
-  InstructorNotFoundError,
-} from "../../services/course-instructor/assign.js";
-
 import prismaClient from "../../config/prisma.js";
 import { Prisma } from "@prisma/client";
+
+class CourseNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CourseNotFoundError";
+  }
+}
+
+class InstructorNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InstructorNotFoundError";
+  }
+}
+
+class AlreadyAssignedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AlreadyAssignedError";
+  }
+}
 
 const handler = async (
   req: Request<{}, {}, CourseInstructorAPITypes.AssignInstructorRequestBody>,
@@ -23,13 +37,46 @@ const handler = async (
   const userAccount = req.user!;
 
   try {
-    const assignment = await assignInstructorToCourseWithRetry(
-      { courseId, accountId },
-      {
-        userAccount,
-        traceId: req.traceId,
+    // Verify course exists
+    const course = await prismaClient.course.findUnique({
+      where: { id: courseId },
+      include: { instructors: { where: { id: accountId }, select: { id: true } } },
+    });
+
+    if (!course) {
+      throw new CourseNotFoundError("Course not found");
+    }
+
+    // Verify instructor exists and has correct role
+    const instructor = await prismaClient.account.findFirst({
+      where: {
+        id: accountId,
+        role: { name: "instructor" },
       },
-    );
+      select: { id: true },
+    });
+
+    if (!instructor) {
+      throw new InstructorNotFoundError("Instructor not found");
+    }
+
+    // Check if already assigned
+    if (course.instructors.length > 0) {
+      throw new AlreadyAssignedError("Instructor already assigned to course");
+    }
+
+    // Assign instructor to course
+    const updatedCourse = await prismaClient.course.update({
+      where: { id: courseId },
+      data: {
+        instructors: {
+          connect: { id: accountId },
+        },
+      },
+      include: {
+        instructors: true,
+      },
+    });
 
     const duration = performance.now() - start;
 
@@ -40,12 +87,10 @@ const handler = async (
       traceId: req.traceId,
       duration,
       details: {
-        courseInstructorId: assignment.id,
         courseId,
         accountId,
       },
       _references: {
-        courseInstructorId: "CourseInstructor",
         courseId: "Course",
         accountId: "Account",
       },
@@ -53,12 +98,12 @@ const handler = async (
 
     res.status(201).json({
       status: "success",
-      assignment,
+      course: updatedCourse,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;
 
-    if (error instanceof CourseInstructorExistsError) {
+    if (error instanceof AlreadyAssignedError) {
       res.status(409).json({
         status: "already-assigned",
       });

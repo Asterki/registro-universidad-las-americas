@@ -1,12 +1,12 @@
 import express from "express";
 
 // Controllers
-import createHandler from "../controllers/faculties/create.js";
-import updateHandler from "../controllers/faculties/update.js";
-import deleteHandler from "../controllers/faculties/delete.js";
-import getHandler from "../controllers/faculties/get.js";
-import listHandler from "../controllers/faculties/list.js";
-import restoreHandler from "../controllers/faculties/restore.js";
+import createHandler from "../controllers/faculties/admin/create.js";
+import updateHandler from "../controllers/faculties/admin/update.js";
+import deleteHandler from "../controllers/faculties/admin/delete.js";
+import getHandler from "../controllers/faculties/admin/get.js";
+import listHandler from "../controllers/faculties/admin/list.js";
+import restoreHandler from "../controllers/faculties/admin/restore.js";
 
 // Middleware
 import { validateRequestBody } from "../middleware/validationMiddleware.js";
@@ -30,6 +30,9 @@ const router = express.Router();
 // Apply global auth middleware
 router.use(ensureAuthenticated);
 
+//#region ─── Faculties Routes ───
+
+// ─── Admin ───
 // Create faculty
 router.post(
   "/create",
@@ -77,5 +80,7 @@ router.post(
   validateRequestBody(listFacultiesSchema),
   listHandler,
 );
+
+//#endregion
 
 export default router;

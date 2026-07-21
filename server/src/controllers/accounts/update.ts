@@ -12,7 +12,6 @@ import { APIError } from "../../errors/api.js";
 
 import prismaClient from "../../config/prisma.js";
 
-
 const handler = async (
   req: Request<{}, {}, AccountAPITypes.UpdateRequestBody>,
   res: Response<AccountAPITypes.UpdateResponseData>,
@@ -52,6 +51,8 @@ const handler = async (
         roleId: roleId,
         email: email?.toLowerCase(),
         name: name?.trim(),
+        campusId: req.body.campusId,
+        facultyId: req.body.facultyId,
       },
       {
         traceId: req.traceId,

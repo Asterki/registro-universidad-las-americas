@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import * as CourseAPITypes from "../../../../shared/api/courses.js";
 
 import LoggingService from "../../services/logging.js";
-import { createCourseWithRetry } from "../../services/course/create.js";
+import { createCourseWithRetry } from "../../services/courses/create.js";
 
 import prismaClient from "../../config/prisma.js";
 
@@ -36,6 +36,8 @@ const handler = async (
     credits,
     schedule,
     classroom,
+    instructorIds,
+    prerequisitesIds,
     maxCapacity,
   } = req.body;
 
@@ -70,6 +72,8 @@ const handler = async (
         schedule,
         classroom,
         maxCapacity,
+        instructorsIds: instructorIds ?? [],
+        prerequisitesIds: prerequisitesIds ?? [],
       },
       {
         userAccount,

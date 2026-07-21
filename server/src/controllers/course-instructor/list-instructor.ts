@@ -3,8 +3,6 @@ import { Request, Response, NextFunction } from "express";
 import * as CourseInstructorAPITypes from "../../../../shared/api/course-instructor.js";
 
 import LoggingService from "../../services/logging.js";
-import { listInstructorCourses } from "../../services/course-instructor/list.js";
-
 import prismaClient from "../../config/prisma.js";
 import { Prisma } from "@prisma/client";
 
@@ -18,13 +16,23 @@ const handler = async (
   const userAccount = req.user!;
 
   try {
-    const assignments = await listInstructorCourses(
-      { accountId },
-      {
-        userAccount,
-        traceId: req.traceId,
+    const courses = await prismaClient.course.findMany({
+      where: {
+        instructors: {
+          some: {
+            id: accountId,
+          },
+        },
+        metadata: {
+          is: {
+            deleted: false,
+          },
+        },
       },
-    );
+      orderBy: {
+        name: "asc",
+      },
+    });
 
     const duration = performance.now() - start;
 
@@ -36,7 +44,7 @@ const handler = async (
       duration,
       details: {
         accountId,
-        count: assignments.length,
+        count: courses.length,
       },
       _references: {
         accountId: "Account",
@@ -45,7 +53,7 @@ const handler = async (
 
     res.status(200).json({
       status: "success",
-      courses: assignments,
+      courses,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;

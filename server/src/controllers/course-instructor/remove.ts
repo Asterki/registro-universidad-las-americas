@@ -3,13 +3,15 @@ import { Request, Response, NextFunction } from "express";
 import * as CourseInstructorAPITypes from "../../../../shared/api/course-instructor.js";
 
 import LoggingService from "../../services/logging.js";
-import {
-  removeInstructorFromCourseWithRetry,
-  CourseInstructorNotFoundError,
-} from "../../services/course-instructor/remove.js";
-
 import prismaClient from "../../config/prisma.js";
 import { Prisma } from "@prisma/client";
+
+class CourseInstructorNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CourseInstructorNotFoundError";
+  }
+}
 
 const handler = async (
   req: Request<{}, {}, CourseInstructorAPITypes.RemoveInstructorRequestBody>,
@@ -17,32 +19,29 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { courseInstructorId } = req.body;
+  const { courseId, accountId } = req.body;
   const userAccount = req.user!;
 
   try {
-    // Look up the assignment to get courseId and accountId
-    const assignment = await prismaClient.courseInstructor.findUnique({
-      where: { id: courseInstructorId },
-      select: { courseId: true, accountId: true },
+    // Check if the course exists and instructor is assigned
+    const course = await prismaClient.course.findUnique({
+      where: { id: courseId },
+      include: { instructors: { where: { id: accountId }, select: { id: true } } },
     });
 
-    if (!assignment) {
-      res.status(404).json({
-        status: "assignment-not-found",
-      });
-      return;
+    if (!course || course.instructors.length === 0) {
+      throw new CourseInstructorNotFoundError("Instructor not assigned to course");
     }
 
-    const { courseId, accountId } = assignment;
-
-    const deleted = await removeInstructorFromCourseWithRetry(
-      { courseId, accountId },
-      {
-        userAccount,
-        traceId: req.traceId,
+    // Remove instructor from course
+    await prismaClient.course.update({
+      where: { id: courseId },
+      data: {
+        instructors: {
+          disconnect: { id: accountId },
+        },
       },
-    );
+    });
 
     const duration = performance.now() - start;
 
@@ -53,12 +52,10 @@ const handler = async (
       traceId: req.traceId,
       duration,
       details: {
-        courseInstructorId: deleted.id,
         courseId,
         accountId,
       },
       _references: {
-        courseInstructorId: "CourseInstructor",
         courseId: "Course",
         accountId: "Account",
       },
@@ -66,7 +63,6 @@ const handler = async (
 
     res.status(200).json({
       status: "success",
-      assignment: deleted,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;

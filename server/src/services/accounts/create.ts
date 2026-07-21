@@ -22,6 +22,7 @@ type CreateUserParameters = {
   email: string;
   password: string;
   roleId: string;
+  campusId?: string;
 };
 
 export class EmailInUseError extends Error {
@@ -37,7 +38,7 @@ export async function createAccount(
   options: CreateUserOptions = {},
 ): Promise<Account> {
   const startTime = performance.now();
-  const { name, email, password, roleId } = parameters;
+  const { name, email, password, roleId, campusId } = parameters;
 
   const now = new Date();
   const createdById = options.userAccount?.id;
@@ -73,7 +74,8 @@ export async function createAccount(
         emailLastChanged: now,
         lastPasswordChange: now,
         password: hashed,
-        metadataId: metadata.id, // assign foreign key
+        metadataId: metadata.id,
+        ...(campusId !== undefined ? { campusId } : {}),
       },
     });
 

@@ -1,34 +1,20 @@
 import { ResponseStatus } from "./index.js";
 import { z } from "zod";
 import {
-  listCoursesByPeriodSchema,
-  listCoursesByFacultySchema,
-  getCourseDetailSchema,
-  getCoursePrerequisitesSchema,
-  listAvailableCoursesForStudentSchema,
-  getCourseRosterSchema,
+  listCoursesSchema,
+  getCourseSchema,
   createCourseSchema,
   updateCourseSchema,
   deleteCourseSchema,
   restoreCourseSchema,
-  listCoursesSchema,
-  getCourseSchema,
 } from "../schemas/courses.js";
 
-export type ListCoursesByPeriodRequestBody = z.infer<
-  typeof listCoursesByPeriodSchema
->;
-export type ListCoursesByFacultyRequestBody = z.infer<
-  typeof listCoursesByFacultySchema
->;
-export type GetCourseDetailRequestBody = z.infer<typeof getCourseDetailSchema>;
-export type GetCoursePrerequisitesRequestBody = z.infer<
-  typeof getCoursePrerequisitesSchema
->;
-export type ListAvailableCoursesForStudentRequestBody = z.infer<
-  typeof listAvailableCoursesForStudentSchema
->;
-export type GetCourseRosterRequestBody = z.infer<typeof getCourseRosterSchema>;
+export type ListCoursesByPeriodRequestBody = z.infer<typeof listCoursesSchema>;
+export type ListCoursesByFacultyRequestBody = z.infer<typeof listCoursesSchema>;
+export type GetCourseDetailRequestBody = z.infer<typeof getCourseSchema>;
+export type GetCoursePrerequisitesRequestBody = z.infer<typeof getCourseSchema>;
+export type ListAvailableCoursesForStudentRequestBody = z.infer<typeof listCoursesSchema>;
+export type GetCourseRosterRequestBody = z.infer<typeof getCourseSchema>;
 
 export interface ListCoursesResponse {
   status: ResponseStatus;

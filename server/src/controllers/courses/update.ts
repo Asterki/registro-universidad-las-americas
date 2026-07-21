@@ -5,7 +5,7 @@ import LoggingService from "../../services/logging.js";
 import {
   CourseNotFoundError,
   updateCourseWithRetry,
-} from "../../services/course/update.js";
+} from "../../services/courses/update.js";
 
 import { Prisma } from "@prisma/client";
 import prismaClient from "../../config/prisma.js";
@@ -37,8 +37,18 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { courseId, code, name, credits, schedule, classroom, maxCapacity, facultyId, periodId } =
-    req.body;
+  const {
+    courseId,
+    code,
+    name,
+    credits,
+    schedule,
+    classroom,
+    maxCapacity,
+    facultyId,
+    periodId,
+    instructorIds,
+  } = req.body;
   const userAccount = req.user!;
 
   try {
@@ -58,7 +68,7 @@ const handler = async (
     // If code+periodId is changing, check for duplicates
     const effectiveCode = code ?? existingCourse.code;
     const effectivePeriodId = periodId ?? existingCourse.periodId;
-    if ((code !== undefined || periodId !== undefined)) {
+    if (code !== undefined || periodId !== undefined) {
       const dupCheck = await prismaClient.course.findFirst({
         where: {
           code: effectiveCode,
@@ -69,7 +79,9 @@ const handler = async (
         select: { id: true },
       });
       if (dupCheck) {
-        throw new CodeInUseError(`A course with code ${effectiveCode} already exists in this period.`);
+        throw new CodeInUseError(
+          `A course with code ${effectiveCode} already exists in this period.`,
+        );
       }
     }
 
@@ -92,6 +104,20 @@ const handler = async (
       });
       if (!period) {
         throw new PeriodNotFoundError(`Period ${periodId} not found`);
+      }
+    }
+
+    // Verify instructors if changing
+    if (instructorIds !== undefined) {
+      const instructors = await prismaClient.account.findMany({
+        where: {
+          id: { in: instructorIds },
+          metadata: { is: { deleted: false } },
+        },
+        select: { id: true },
+      });
+      if (instructors.length !== instructorIds.length) {
+        throw new Error("One or more instructors not found or deleted");
       }
     }
 

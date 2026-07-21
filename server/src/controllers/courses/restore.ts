@@ -6,7 +6,7 @@ import LoggingService from "../../services/logging.js";
 import {
   CourseNotFoundError,
   restoreCourseWithRetry,
-} from "../../services/course/restore.js";
+} from "../../services/courses/restore.js";
 
 import { Prisma } from "@prisma/client";
 

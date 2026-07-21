@@ -3,8 +3,6 @@ import { Request, Response, NextFunction } from "express";
 import * as CourseInstructorAPITypes from "../../../../shared/api/course-instructor.js";
 
 import LoggingService from "../../services/logging.js";
-import { listCourseInstructors } from "../../services/course-instructor/list.js";
-
 import prismaClient from "../../config/prisma.js";
 import { Prisma } from "@prisma/client";
 
@@ -18,13 +16,14 @@ const handler = async (
   const userAccount = req.user!;
 
   try {
-    const instructors = await listCourseInstructors(
-      { courseId },
-      {
-        userAccount,
-        traceId: req.traceId,
+    const course = await prismaClient.course.findUnique({
+      where: { id: courseId },
+      include: {
+        instructors: true,
       },
-    );
+    });
+
+    const instructors = course?.instructors ?? [];
 
     const duration = performance.now() - start;
 

@@ -1,32 +1,46 @@
 import { ResponseStatus } from "./index.js";
-import { z } from "zod";
-import {
-  assignInstructorSchema,
-  removeInstructorSchema,
-  listCourseInstructorsSchema,
-  listInstructorCoursesSchema,
-  activateInstructorAssignmentSchema,
-  deactivateInstructorAssignmentSchema,
-} from "../schemas/course-instructor.js";
+import { Account, Course } from "@prisma/client";
 
-export type AssignInstructorRequestBody = z.infer<typeof assignInstructorSchema>;
-export type RemoveInstructorRequestBody = z.infer<typeof removeInstructorSchema>;
-export type ListCourseInstructorsRequestBody = z.infer<typeof listCourseInstructorsSchema>;
-export type ListInstructorCoursesRequestBody = z.infer<typeof listInstructorCoursesSchema>;
-export type ActivateInstructorAssignmentRequestBody = z.infer<typeof activateInstructorAssignmentSchema>;
-export type DeactivateInstructorAssignmentRequestBody = z.infer<typeof deactivateInstructorAssignmentSchema>;
+export interface AssignInstructorRequestBody {
+  courseId: string;
+  accountId: string;
+}
+
+export interface RemoveInstructorRequestBody {
+  courseId: string;
+  accountId: string;
+}
+
+export interface ListCourseInstructorsRequestBody {
+  courseId: string;
+}
+
+export interface ListInstructorCoursesRequestBody {
+  accountId: string;
+}
+
+export interface ActivateInstructorAssignmentRequestBody {
+  courseId: string;
+  accountId: string;
+}
+
+export interface DeactivateInstructorAssignmentRequestBody {
+  courseId: string;
+  accountId: string;
+}
 
 export interface CourseInstructorResponse {
   status: ResponseStatus | "assignment-not-found" | "already-assigned" | "instructor-not-found" | "course-not-found";
-  assignment?: any;
+  course?: Course;
+  instructor?: Account;
 }
 
 export interface ListCourseInstructorsResponse {
   status: ResponseStatus;
-  instructors?: any[];
+  instructors?: Account[];
 }
 
 export interface ListInstructorCoursesResponse {
   status: ResponseStatus;
-  courses?: any[];
+  courses?: Course[];
 }

@@ -27,6 +27,8 @@ interface UpdateAccountParameters {
   name?: string;
   status?: Account["status"];
   roleId?: string;
+  campusId?: string;
+  facultyId?: string;
   password?: string;
 }
 
@@ -100,6 +102,20 @@ export async function updateAccount(
     const hashed = await bcrypt.hash(params.password, 10);
     updatePayload.password = hashed;
     changes["preferences.security.password"] = "[REDACTED]";
+  }
+
+  if (typeof params.campusId !== "undefined") {
+    updatePayload.campus = params.campusId
+      ? { connect: { id: params.campusId } }
+      : { disconnect: true };
+    changes["campusId"] = params.campusId || null;
+  }
+
+  if (typeof params.facultyId !== "undefined") {
+    updatePayload.faculty = params.facultyId
+      ? { connect: { id: params.facultyId } }
+      : { disconnect: true };
+    changes["facultyId"] = params.facultyId || null;
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {

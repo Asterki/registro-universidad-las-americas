@@ -180,6 +180,7 @@ export default function PageLayout({
             src="/assets/img/icon.png"
             alt="Icon"
             style={{ width: 42, height: 42, objectFit: "contain" }}
+            className="rounded-full"
           />
           <div className="text-white">
             <h1 style={{ margin: 0 }} className="text-white font-bold text-lg">

@@ -31,6 +31,8 @@ type AccountsTableProps = {
   onDelete: (account: ListAccount) => void;
   onRestore: (account: ListAccount) => void;
   accountRoles?: { id: string; name: string; level: number }[];
+  campuses?: { id: string; name: string }[];
+  faculties?: { id: string; name: string }[];
 };
 
 export function AccountsTable({
@@ -43,6 +45,8 @@ export function AccountsTable({
   onUpdateStatus,
   onChangePassword,
   accountRoles = [],
+  campuses = [],
+  faculties = [],
 }: AccountsTableProps) {
   const { t: tComponent } = useTranslation(["features"], {
     keyPrefix: "accounts.components.table",
@@ -128,6 +132,97 @@ export function AccountsTable({
             title: tComponent("email"),
             render: (_: any, record: ListAccount) => <p>{record.email}</p>,
           },
+
+
+          {
+            title: "Campus",
+            render: (_: any, record: ListAccount) => <p>{record.campus.name}</p>,
+            filterIcon: () => {
+              const hasFilter =
+                (accountsListState.filters ?? {}).campus !== undefined;
+              return (
+                <FaFilter className={`${hasFilter ? "text-blue-500" : ""}`} />
+              );
+            },
+            filterDropdown: () => {
+              return (
+                <Space className="p-2 flex gap-2 items-center">
+                  <Select
+                    placeholder={"Filtro por Campus"}
+                    allowClear
+                    onClear={() => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...accountsListState.filters,
+                          campus: undefined,
+                        },
+                      });
+                    }}
+                    value={(accountsListState.filters ?? {}).campus}
+                    options={campuses.map((campus) => ({
+                      label: `${campus.name}`,
+                      value: campus.id,
+                    }))}
+                    onChange={(val) => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...(accountsListState.filters ?? {}),
+                          campus: val,
+                        },
+                      });
+                    }}
+                  />
+                </Space>
+              );
+            },
+          },
+          {
+            title: "Facultad",
+            render: (_: any, record: ListAccount) => <p>{record.faculty.name}</p>,
+            filterIcon: () => {
+              const hasFilter =
+                (accountsListState.filters ?? {}).faculty !== undefined;
+              return (
+                <FaFilter className={`${hasFilter ? "text-blue-500" : ""}`} />
+              );
+            },
+            filterDropdown: () => {
+              return (
+                <Space className="p-2 flex gap-2 items-center">
+                  <Select
+                    placeholder={"Filtro por Facultad"}
+                    allowClear
+                    onClear={() => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...accountsListState.filters,
+                          faculty: undefined,
+                        },
+                      });
+                    }}
+                    value={(accountsListState.filters ?? {}).faculty}
+                    options={faculties.map((faculty) => ({
+                      label: `${faculty.name}`,
+                      value: faculty.id,
+                    }))}
+                    onChange={(val) => {
+                      fetchAccounts({
+                        page: 0,
+                        filters: {
+                          ...(accountsListState.filters ?? {}),
+                          faculty: val,
+                        },
+                      });
+                    }}
+                  />
+                </Space>
+              );
+            },
+          },
+
           {
             title: tComponent("role"),
             render: (_: any, record: ListAccount) => (

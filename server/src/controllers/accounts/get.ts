@@ -34,6 +34,8 @@ const handler = async (
           "metadata.updatedBy": ["id", "name"],
           "metadata.deletedBy": ["id", "name"],
           role: ["id", "name", "level"],
+          campus: ["id", "name"],
+          faculty: ["id", "name"],
         })
       : {};
 

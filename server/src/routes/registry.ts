@@ -1,9 +1,8 @@
 import express from "express";
 
 // Controllers
-import listRequestsHandler from "../controllers/registry/list-requests.js";
-import processRequestHandler from "../controllers/registry/process-request.js";
-import listInstructorsHandler from "../controllers/registry/list-instructors.js";
+import listRequestsHandler from "../controllers/requests/admin/list.js";
+import processRequestHandler from "../controllers/requests/admin/update.js";
 
 // Middleware
 import { validateRequestBody } from "../middleware/validationMiddleware.js";
@@ -24,6 +23,10 @@ const router = express.Router();
 // Apply global auth middleware
 router.use(ensureAuthenticated);
 
+//#region ─── Registry Routes ───
+
+// ─── Admin / Registry ───
+
 // List all academic requests
 router.post(
   "/requests/list",
@@ -40,12 +43,6 @@ router.post(
   processRequestHandler,
 );
 
-// List all instructors
-router.post(
-  "/instructors/list",
-  ensurePermissions(["registry:list-instructors"]),
-  validateRequestBody(listAllInstructorsSchema),
-  listInstructorsHandler,
-);
+//#endregion
 
 export default router;

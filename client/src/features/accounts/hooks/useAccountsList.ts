@@ -6,8 +6,8 @@ import { App } from "antd";
 
 export type NullableAccountsListState = {
   [K in keyof AccountAPITypes.ListRequestBody]?:
-  | AccountAPITypes.ListRequestBody[K]
-  | null;
+    | AccountAPITypes.ListRequestBody[K]
+    | null;
 };
 export type FetchAccountsFn = (
   params?: NullableAccountsListState,
@@ -34,10 +34,12 @@ export function useAccountsList({
       "email",
       "role",
       "id",
+      "campus",
+      "faculty",
       "status",
       "metadata.deleted",
     ],
-    populate: ["role"],
+    populate: ["role", "campus", "faculty"],
     count: 50,
     page: 0,
   });
@@ -85,6 +87,14 @@ export function useAccountsList({
             id: acc.id.toString(),
             name: acc.name,
             email: acc.email,
+            campus: {
+              id: acc.campus?.id || "",
+              name: acc.campus?.name || "",
+            },
+            faculty: {
+              id: acc.faculty?.id || "",
+              name: acc.faculty?.name || "",
+            },
             role: {
               id: acc.roleId,
               name: acc.role!.name,

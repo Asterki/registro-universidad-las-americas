@@ -1,9 +1,17 @@
 import { Request, Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
 
 import * as CoordinatorAPITypes from "../../../../shared/api/coordinator.js";
 
 import LoggingService from "../../services/logging.js";
-import { getCoordinatorFacultyScope, CoordinatorNotFoundError } from "../../services/coordinator/scope.js";
+import prismaClient from "../../config/prisma.js";
+
+class CoordinatorNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CoordinatorNotFoundError";
+  }
+}
 
 const handler = async (
   req: Request<{}, {}, CoordinatorAPITypes.GetCoordinatorFacultyScopeRequestBody>,
@@ -15,13 +23,24 @@ const handler = async (
   try {
     const userAccount = req.user!;
 
-    const coordinator = await getCoordinatorFacultyScope(
-      { accountId: (userAccount as any).id },
-      {
-        traceId: req.traceId,
-        userAccount,
+    // Query the account with coordinator role and their faculty scope
+    const account = await prismaClient.account.findUnique({
+      where: { id: userAccount.id },
+      include: {
+        facultiesCoordinated: {
+          include: {
+            campus: true,
+          },
+        },
+        role: true,
       },
-    );
+    });
+
+    if (!account || account.facultiesCoordinated.length === 0) {
+      throw new CoordinatorNotFoundError("Account is not a coordinator");
+    }
+
+    const faculty = account.facultiesCoordinated[0];
 
     const duration = performance.now() - start;
 
@@ -32,14 +51,14 @@ const handler = async (
       traceId: req.traceId,
       duration,
       details: {
-        accountId: (userAccount as any).id,
-        facultyId: coordinator.facultyId,
+        accountId: userAccount.id,
+        facultyId: faculty.id,
       },
     });
 
     res.status(200).json({
       status: "success",
-      faculty: coordinator,
+      faculty,
     });
   } catch (error: unknown) {
     const duration = performance.now() - start;

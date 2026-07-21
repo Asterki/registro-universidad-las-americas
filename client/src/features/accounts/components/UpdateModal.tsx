@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { FaRecycle } from "react-icons/fa";
 
 import type { UpdateDrawerState } from "../hooks/useUpdateModal";
-import { CampusCode } from "@prisma/client";
 
 type UpdateModalProps = {
   state: UpdateDrawerState;
@@ -11,6 +10,8 @@ type UpdateModalProps = {
   onClose: () => void;
   onUpdate: () => void;
   accountRoles?: { id: string; name: string; level: number }[];
+  campuses?: { id: string; name: string }[];
+  faculties?: { id: string; name: string }[];
 };
 
 export function UpdateModal({
@@ -19,6 +20,8 @@ export function UpdateModal({
   onClose,
   onUpdate,
   accountRoles = [],
+  campuses = [],
+  faculties = [],
 }: UpdateModalProps) {
   const { t } = useTranslation(["features"], {
     keyPrefix: "accounts.components.updateModal",
@@ -40,7 +43,7 @@ export function UpdateModal({
       okText={t("title")}
     >
       <Form layout="vertical">
-        <Form.Item label={t("fields.name")} required >
+        <Form.Item label={t("fields.name")} required>
           <Input
             value={state.name}
             onChange={(e) =>
@@ -49,7 +52,7 @@ export function UpdateModal({
             disabled={state.loading}
           />
         </Form.Item>
-        <Form.Item label={t("fields.email")} required >
+        <Form.Item label={t("fields.email")} required>
           <Input
             value={state.email}
             onChange={(e) =>
@@ -58,12 +61,10 @@ export function UpdateModal({
             disabled={state.loading}
           />
         </Form.Item>
-        <Form.Item label={t("fields.role")} required >
+        <Form.Item label={t("fields.role")} required>
           <Select
             value={state.roleId}
-            onChange={(val) =>
-              setState((prev) => ({ ...prev, roleId: val }))
-            }
+            onChange={(val) => setState((prev) => ({ ...prev, roleId: val }))}
             defaultValue={state.roleId}
             disabled={state.loading}
             options={accountRoles.map((role) => ({
@@ -72,27 +73,38 @@ export function UpdateModal({
             }))}
           />
         </Form.Item>
-        <Form.Item label={t("fields.campus")} required >
+        <Form.Item label={t("fields.campus")} required>
           <Select
             placeholder={t("fields.campusPlaceholder")}
             options={[
-              { label: "Comayagua", value: "COMAYAGUA" },
-              { label: "Tegucigalpa", value: "TEGUCIGALPA" },
-              { label: "San Pedro Sula", value: "SANPEDRO" },
-              { label: "Olancho", value: "OLANCHO" },
-              { label: "La Ceiba", value: "LA_CEIBA" },
-              { label: "Choluteca", value: "CHOLUTECA" },
-              { label: "Danlí", value: "DANLI" },
-              { label: "Santa Rosa de Copán", value: "SANTA_ROSA" },
-            ] as { label: string; value: CampusCode }[]}
-            value={state.campus}
+              ...(campuses?.map((campus) => ({
+                label: campus.name,
+                value: campus.id,
+              })) || []),
+            ]}
+            value={state.campusId}
             onChange={(value) =>
-              setState((prev) => ({ ...prev, campus: value }))
-            } />
+              setState((prev) => ({ ...prev, campusId: value }))
+            }
+          />
+        </Form.Item>
+
+        <Form.Item label={"Facultad"}>
+          <Select
+            placeholder={"Seleccione una facultad"}
+            options={[
+              ...(faculties?.map((faculty) => ({
+                label: faculty.name,
+                value: faculty.id,
+              })) || []),
+            ]}
+            value={state.facultyId}
+            onChange={(value) =>
+              setState((prev) => ({ ...prev, facultyId: value }))
+            }
+          />
         </Form.Item>
       </Form>
     </Modal>
   );
 }
-
-

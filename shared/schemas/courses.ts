@@ -22,9 +22,6 @@ export const listCoursesSchema = z.object({
   count: z.number().min(1, "count-too-low"),
   page: z.number().min(0, "page-too-low"),
   includeDeleted: z.boolean().optional(),
-  facultyId: z.cuid("invalid-faculty-id").optional(),
-  periodId: z.cuid("invalid-period-id").optional(),
-  instructorId: z.cuid("invalid-instructor-id").optional(),
   search: z
     .object({
       query: z.string().min(1, "query-too-short"),
@@ -34,6 +31,13 @@ export const listCoursesSchema = z.object({
   fields: z.array(courseFields).optional(),
   populate: z
     .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
+    .optional(),
+  filters: z
+    .object({
+      facultyId: z.cuid("invalid-faculty-id").optional(),
+      periodId: z.cuid("invalid-period-id").optional(),
+      instructorId: z.cuid("invalid-instructor-id").optional(),
+    })
     .optional(),
 });
 
@@ -48,6 +52,11 @@ export const getCourseSchema = z.object({
 export const createCourseSchema = z.object({
   facultyId: z.cuid("invalid-faculty-id"),
   periodId: z.cuid("invalid-period-id"),
+  instructorIds: z
+    .array(z.cuid("invalid-instructor-id"))
+    .min(1, "at-least-one-instructor-required")
+    .optional(),
+  prerequisitesIds: z.array(z.cuid("invalid-prerequisite-id")).optional(),
   code: z.string().min(1, "code-too-short").max(20, "code-too-long"),
   name: z.string().min(1, "name-too-short").max(150, "name-too-long"),
   credits: z.number().min(1, "credits-too-low").max(30, "credits-too-high"),
@@ -58,10 +67,6 @@ export const createCourseSchema = z.object({
     .min(1, "capacity-too-low")
     .max(200, "capacity-too-high")
     .default(30),
-  instructorIds: z
-    .array(z.cuid("invalid-instructor-id"))
-    .min(1, "at-least-one-instructor-required")
-    .optional(),
 });
 
 export const updateCourseSchema = z.object({

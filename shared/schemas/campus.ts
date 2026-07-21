@@ -23,7 +23,7 @@ const campusFields = z.enum(
   "invalid-field",
 );
 
-export const listCampusesSchema = z.object({
+export const listSchema = z.object({
   count: z.number().min(1, "count-too-low"),
   page: z.number().min(0, "page-too-low"),
   includeDeleted: z.boolean().optional(),
@@ -40,7 +40,7 @@ export const listCampusesSchema = z.object({
     .optional(),
 });
 
-export const getCampusSchema = z.object({
+export const getSchema = z.object({
   campusIds: z.array(z.cuid("invalid-campus-id")),
   fields: z.array(campusFields).optional(),
   populate: z
@@ -48,14 +48,14 @@ export const getCampusSchema = z.object({
     .optional(),
 });
 
-export const createCampusSchema = z.object({
+export const createSchema = z.object({
   name: nameSchema,
   city: citySchema,
   address: addressSchema,
   phone: phoneSchema,
 });
 
-export const updateCampusSchema = z.object({
+export const updateSchema = z.object({
   campusId: z.cuid("invalid-campus-id"),
   name: nameSchema.optional(),
   city: citySchema.optional(),
@@ -63,10 +63,10 @@ export const updateCampusSchema = z.object({
   phone: phoneSchema.optional(),
 });
 
-export const deleteCampusSchema = z.object({
+export const deleteSchema = z.object({
   campusId: z.cuid("invalid-campus-id"),
 });
 
-export const restoreCampusSchema = z.object({
+export const restoreSchema = z.object({
   campusId: z.cuid("invalid-campus-id"),
 });

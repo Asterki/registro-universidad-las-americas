@@ -18,7 +18,8 @@ const handler = async (
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { page, count, fields, populate, search, includeDeleted, facultyId, periodId } = req.body;
+  const { page, count, fields, populate, search, includeDeleted, filters } =
+    req.body;
 
   try {
     const where: Prisma.CourseWhereInput = {};
@@ -29,13 +30,13 @@ const handler = async (
     });
     const fieldsToPopulate = populate
       ? getFieldsToPopulate<
-        CourseInclude,
-        NonNullable<CoursesAPITypes.ListCoursesRequestBody["populate"]>
-      >(populate, {
-        "metadata.createdBy": ["id", "name"],
-        "metadata.updatedBy": ["id", "name"],
-        "metadata.deletedBy": ["id", "name"],
-      })
+          CourseInclude,
+          NonNullable<CoursesAPITypes.ListCoursesRequestBody["populate"]>
+        >(populate, {
+          "metadata.createdBy": ["id", "name"],
+          "metadata.updatedBy": ["id", "name"],
+          "metadata.deletedBy": ["id", "name"],
+        })
       : {};
 
     if (search && search.query.length > 0 && search.searchIn.length > 0) {
@@ -49,12 +50,22 @@ const handler = async (
       where.OR = searchConditions;
     }
 
-    if (facultyId !== undefined) {
-      where.facultyId = facultyId;
-    }
+    if (filters) {
+      if (filters.facultyId !== undefined) {
+        where.facultyId = filters.facultyId;
+      }
 
-    if (periodId !== undefined) {
-      where.periodId = periodId;
+      if (filters.periodId !== undefined) {
+        where.periodId = filters.periodId;
+      }
+
+      if (filters.instructorId !== undefined) {
+        where.instructors = {
+          some: {
+            id: filters.instructorId,
+          },
+        };
+      }
     }
 
     if (!includeDeleted) {

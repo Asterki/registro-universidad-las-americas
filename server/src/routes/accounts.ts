@@ -31,7 +31,9 @@ import {
 // Apply global middlewares
 router.use(ensureAuthenticated);
 
-// Routes with their schemas
+//#region ─── Accounts Routes ───
+
+// ─── Admin ───
 router.post(
   "/create",
   ensurePermissions(["accounts:create"]),
@@ -53,6 +55,7 @@ router.post(
   updateStatusHandler,
 );
 
+// ─── Student ───
 router.post(
   "/update-password",
   ensurePermissions(["accounts:change-password"]),
@@ -77,5 +80,7 @@ router.post(
 router.post("/get", validateRequestBody(getSchema), getHandler);
 
 router.post("/list", validateRequestBody(listSchema), listHandler);
+
+//#endregion
 
 export default router;

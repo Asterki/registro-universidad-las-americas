@@ -46,9 +46,6 @@ const resetDatabase = async () => {
   await prismaClient.grade.deleteMany({});
   await prismaClient.enrollment.deleteMany({});
   await prismaClient.request.deleteMany({});
-  await prismaClient.coordinator.deleteMany({});
-  await prismaClient.courseInstructor.deleteMany({});
-  await prismaClient.prerequisite.deleteMany({});
   await prismaClient.course.deleteMany({});
   await prismaClient.period.deleteMany({});
   await prismaClient.faculty.deleteMany({});
@@ -448,13 +445,12 @@ const demo = async () => {
     if (assignedPairs.has(key)) continue;
     assignedPairs.add(key);
 
-    const metadataId = await createMetadata("asignacion,demo");
-    await prismaClient.courseInstructor.create({
+    await prismaClient.course.update({
+      where: { id: course.id },
       data: {
-        courseId: course.id,
-        accountId: teacher.id,
-        active: true,
-        metadataId,
+        instructors: {
+          connect: { id: teacher.id },
+        },
       },
     });
   }
@@ -467,18 +463,12 @@ const demo = async () => {
     if (pool.length === 0) continue;
     const teacher = faker.helpers.arrayElement(pool);
 
-    const existing = await prismaClient.coordinator.findUnique({
-      where: { accountId: teacher.id },
-    });
-    if (existing) continue;
-
-    const metadataId = await createMetadata("coordinador,demo");
-    await prismaClient.coordinator.create({
+    await prismaClient.faculty.update({
+      where: { id: faculty.id },
       data: {
-        accountId: teacher.id,
-        facultyId: faculty.id,
-        active: true,
-        metadataId,
+        coordinators: {
+          connect: { id: teacher.id },
+        },
       },
     });
     console.log(`  ok Coordinador asignado a facultad ${faculty.id}`);

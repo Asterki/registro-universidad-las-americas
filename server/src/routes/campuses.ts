@@ -1,12 +1,12 @@
 import express from "express";
 
 // Controllers
-import createHandler from "../controllers/campuses/create.js";
-import updateHandler from "../controllers/campuses/update.js";
-import deleteHandler from "../controllers/campuses/delete.js";
-import getHandler from "../controllers/campuses/get.js";
-import listHandler from "../controllers/campuses/list.js";
-import restoreHandler from "../controllers/campuses/restore.js";
+import createHandler from "../controllers/campuses/admin/create.js";
+import updateHandler from "../controllers/campuses/admin/update.js";
+import deleteHandler from "../controllers/campuses/admin/delete.js";
+import getHandler from "../controllers/campuses/admin/get.js";
+import listHandler from "../controllers/campuses/admin/list.js";
+import restoreHandler from "../controllers/campuses/admin/restore.js";
 
 // Middleware
 import { validateRequestBody } from "../middleware/validationMiddleware.js";
@@ -30,7 +30,10 @@ const router = express.Router();
 // Apply global auth middleware
 router.use(ensureAuthenticated);
 
-// Create role
+//#region ─── Campuses Routes ───
+
+// ─── Admin ───
+// Create campus
 router.post(
   "/create",
   ensurePermissions(["campuses:create"]),
@@ -38,7 +41,7 @@ router.post(
   createHandler,
 );
 
-// Update role
+// Update campus
 router.post(
   "/update",
   ensurePermissions(["campuses:update"]),
@@ -46,7 +49,7 @@ router.post(
   updateHandler,
 );
 
-// Delete role
+// Delete campus
 router.post(
   "/delete",
   ensurePermissions(["campuses:delete"]),
@@ -54,7 +57,7 @@ router.post(
   deleteHandler,
 );
 
-// Restore role
+// Restore campus
 router.post(
   "/restore",
   ensurePermissions(["campuses:restore"]),
@@ -62,11 +65,12 @@ router.post(
   restoreHandler,
 );
 
-// Get role(s)
+// Get campus(s)
 router.post("/get", validateRequestBody(getSchema), getHandler);
 
-// List roles
+// List campus
 router.post("/list", validateRequestBody(listSchema), listHandler);
 
-export default router;
+//#endregion
 
+export default router;

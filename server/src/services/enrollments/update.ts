@@ -3,7 +3,8 @@ import retry from "async-retry";
 
 import {
   Account,
-  AccountRole,
+  Enrollment,
+  EnrollmentStatus,
   MetadataSource,
   MetadataStatus,
   MetadataUpdateHistory,
@@ -13,58 +14,45 @@ import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 
-type AccountRoleUpdateInput = Prisma.AccountRoleUpdateInput;
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 type MetadataUpdateInput = Prisma.MetadataUpdateInput;
 
-type UpdateAccountRoleParameters = {
-  roleId: string;
-  name?: string;
-  description?: string;
-  level?: number;
-  permissions?: string[];
-  requiresTwoFactor?: boolean;
+type UpdateEnrollmentParameters = {
+  enrollmentId: string;
+  status?: EnrollmentStatus;
+  finalGrade?: number;
+  cancelledAt?: Date;
+  cancelledById?: string;
 };
 
-type UpdateAccountRoleOptions = {
+type UpdateEnrollmentOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class AccountRoleNotFoundError extends Error {
+export class EnrollmentNotFoundError extends Error {
   retryable = false;
-  /** @param message Error message */
   constructor(message: string) {
     super(message);
-    this.name = "AccountRoleNotFoundError";
+    this.name = "EnrollmentNotFoundError";
   }
 }
 
-export class AccountRoleExistsError extends Error {
-  retryable = false;
-  /** @param message Error message */
-  constructor(message: string) {
-    super(message);
-    this.name = "AccountRoleExistsError";
-  }
-}
-
-export async function updateAccountRole(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateEnrollment(
+  params: UpdateEnrollmentParameters,
+  options: UpdateEnrollmentOptions,
+): Promise<Enrollment> {
   const startTime = performance.now();
   const now = new Date();
 
-  const { roleId, name, description, level, permissions, requiresTwoFactor } =
+  const { enrollmentId, status, finalGrade, cancelledAt, cancelledById } =
     params;
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing role ensuring it's not deleted (metadata.deleted !== true)
-  const existingRole = await prismaClient.accountRole.findUnique({
+  const existingEnrollment = await prismaClient.enrollment.findUnique({
     where: {
-      id: roleId,
+      id: enrollmentId,
       metadata: {
         is: {
           deleted: false,
@@ -76,34 +64,28 @@ export async function updateAccountRole(
     },
   });
 
-  if (!existingRole) {
-    throw new AccountRoleNotFoundError("Account role not found or deleted");
+  if (!existingEnrollment) {
+    throw new EnrollmentNotFoundError("Enrollment not found or deleted");
   }
 
-  // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
-  const updatePayload: Prisma.AccountRoleUpdateInput = {};
+  const updatePayload: Prisma.EnrollmentUpdateInput = {};
 
-  // Doing it like this because otherwise we lose type safety
-  if (name !== undefined) {
-    changes.name = name;
-    updatePayload.name = name;
+  if (status !== undefined) {
+    changes.status = status;
+    updatePayload.status = status;
   }
-  if (description !== undefined) {
-    changes.description = description;
-    updatePayload.description = description;
+  if (finalGrade !== undefined) {
+    changes.finalGrade = finalGrade;
+    updatePayload.finalGrade = finalGrade;
   }
-  if (level !== undefined) {
-    changes.level = level;
-    updatePayload.level = level;
+  if (cancelledAt !== undefined) {
+    changes.cancelledAt = cancelledAt.toISOString();
+    updatePayload.cancelledAt = cancelledAt;
   }
-  if (permissions !== undefined) {
-    changes.permissions = permissions;
-    updatePayload.permissions = permissions.join(",");
-  }
-  if (requiresTwoFactor !== undefined) {
-    changes.requiresTwoFactor = requiresTwoFactor;
-    updatePayload.requiresTwoFactor = requiresTwoFactor;
+  if (cancelledById !== undefined) {
+    changes.cancelledById = cancelledById;
+    updatePayload.cancelledBy = { connect: { id: cancelledById } };
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
@@ -120,7 +102,7 @@ export async function updateAccountRole(
     },
   };
 
-  if (existingRole.metadata) {
+  if (existingEnrollment.metadata) {
     updatePayload.metadata = { update: metadataUpdatePayload };
   } else {
     updatePayload.metadata = {
@@ -143,63 +125,55 @@ export async function updateAccountRole(
   }
 
   try {
-    const updated = await prismaClient.accountRole.update({
-      where: { id: params.roleId },
+    const updated = await prismaClient.enrollment.update({
+      where: { id: enrollmentId },
       data: updatePayload,
       include: { metadata: { include: { updateHistory: true } } },
     });
 
     LoggingService.log({
-      source: "services:account-roles:update",
+      source: "services:enrollment:update",
       level: "important",
-      message: "Admin updated account role",
+      message: "Enrollment updated",
       traceId: options.traceId,
       duration: Number((performance.now() - startTime).toFixed(3)),
       details: {
-        roleId: updated.id,
-        updatedBy: userAccountId != null ? userAccountId : undefined,
+        enrollmentId: updated.id,
+        ...(userAccountId ? { updatedBy: userAccountId } : {}),
       },
       _references: {
-        roleId: "AccountRole",
-        updatedBy: "Account",
+        enrollmentId: "Enrollment",
+        ...(userAccountId ? { updatedBy: "Account" } : {}),
       },
     });
 
     return updated;
   } catch (err: any) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002" &&
-      (err.meta as any)?.target?.includes?.("name")
-    ) {
-      throw new AccountRoleExistsError(
-        "An account role with this name already exists",
-      );
-    }
     throw err;
   }
 }
 
-export async function updateAccountRoleWithRetry(
-  params: UpdateAccountRoleParameters,
-  options: UpdateAccountRoleOptions,
-): Promise<AccountRole> {
+export async function updateEnrollmentWithRetry(
+  params: UpdateEnrollmentParameters,
+  options: UpdateEnrollmentOptions,
+): Promise<Enrollment> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await updateAccountRole(params, options);
+        return await updateEnrollment(params, options);
       } catch (error: any) {
-        if (error instanceof AccountRoleNotFoundError) {
+        if (error instanceof EnrollmentNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({
-          source: "services:account-roles:update:retry",
+          source: "services:enrollment:update:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during account role update (attempt ${attempt})`,
+          message: `Retryable error during enrollment update (attempt ${attempt})`,
           details: { error: error?.message, stack: error?.stack },
         });
 

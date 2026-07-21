@@ -15,6 +15,7 @@ import {
   FaUniversity,
   FaBook,
   FaCalendarAlt,
+  FaUserClock,
 } from "react-icons/fa";
 
 import {
@@ -101,6 +102,42 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
       },
 
       {
+        key: "panels",
+        label: "Otras secciones",
+        icon: <FaUserClock />,
+        children: [
+          {
+            key: "instructors",
+            label: (
+              <Link to="/instructor">
+                Instructores
+              </Link>
+            ),
+            icon: <FaBuilding />,
+          },
+          {
+            key: "students",
+            label: (
+              <Link to="/student">
+                Estudiantes
+              </Link>
+            ),
+            icon: <FaUsers />,
+          },
+          {
+            key: "registry",
+            label: (
+              <Link to="/registry">
+                Registro
+              </Link>
+            ),
+            icon: <FaInfo />,
+          },
+        ],
+      },
+
+
+      {
         key: "institution",
         label: "Institución",
         icon: <FaBuilding />,
@@ -133,20 +170,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
             },
             icon: <FaUniversity />,
           },
-          {
-            key: "institution-courses",
-            label: (
-              <Link to="/admin/courses">
-                Cursos
-              </Link>
-            ),
-            style: {
-              display: hasPermissions(userPermissions, ["courses:read"])
-                ? "block"
-                : "none",
-            },
-            icon: <FaBook />,
-          },
+
           {
             key: "institution-periods",
             label: (
@@ -154,24 +178,11 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
                 Períodos
               </Link>
             ),
-            style: {
-              display: hasPermissions(userPermissions, ["periods:read"])
-                ? "block"
-                : "none",
-            },
             icon: <FaCalendarAlt />,
           },
         ],
       },
 
-      {
-        key: "reports-group",
-        label: t("sidebar.reports-group.title"),
-        icon: <FaChartArea />,
-        children: [
-
-        ],
-      },
 
       {
         key: "management",
@@ -208,27 +219,6 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
             icon: <FaUserShield />,
           },
 
-          {
-            key: "config",
-            label: (
-              <Link to="/admin/config">{t("sidebar.management.config")}</Link>
-            ),
-            style: {
-              display: hasPermissions(userPermissions, ["config:read"]) ? "block" : "none",
-            },
-            icon: <FaCog />,
-          },
-
-          {
-            key: "logs",
-            label: <Link to="/admin/logs">{t("sidebar.management.logs")}</Link>,
-            style: {
-              display: hasPermissions(userPermissions, ["logs:read"])
-                ? "block"
-                : "none",
-            },
-            icon: <FaTerminal />,
-          },
         ],
       },
       {
@@ -268,6 +258,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
             src="/assets/img/icon.png"
             alt="Icon"
             style={{ width: 42, height: 42, objectFit: "contain" }}
+            className="rounded-full"
           />
           <div className="text-white">
             <h1 style={{ margin: 0 }} className="text-white font-bold text-lg">
@@ -292,7 +283,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
           <Menu
             mode="inline"
             defaultOpenKeys={[
-              "reports-group",
+              "panels",
               "management",
               "institution"
             ]}
@@ -313,7 +304,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
             mode="inline"
             defaultSelectedKeys={[selectedPage || "dashboard"]}
             defaultOpenKeys={[
-              "reports-group",
+              "panels",
               "management",
               "institution"
             ]}
@@ -324,8 +315,6 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
             onClick={() => setDrawerVisible(false)}
           />
         </Drawer>
-
-
 
         {/* Main Content */}
         <Layout

@@ -1,10 +1,12 @@
 import { z } from "zod";
-import {
-  metadataFields,
-  metadataPopulateFields,
-} from "./index.js";
+import { metadataFields, metadataPopulateFields } from "./index.js";
 
-const populateFields = z.enum([...metadataPopulateFields, "role"]);
+const populateFields = z.enum([
+  ...metadataPopulateFields,
+  "role",
+  "campus",
+  "faculty",
+]);
 const accountFields = z.enum(
   [
     "id",
@@ -16,6 +18,13 @@ const accountFields = z.enum(
     "emailLastChanged",
     "name",
     "lastPasswordChange",
+    "accountNumber",
+    "academicStatus",
+    "enrollmentDate",
+    "specialty",
+    "contactType",
+    "campus",
+    "faculty",
     ...metadataFields,
   ],
   "invalid-field",
@@ -44,6 +53,8 @@ const updateSchema = z.object({
     .optional(),
   email: z.email("invalid-email").optional(),
   roleId: z.cuid("invalid-role-id").optional(),
+  campusId: z.cuid("invalid-campus-id").optional(),
+  facultyId: z.cuid("invalid-faculty-id").optional(),
   disableTwoFactor: z.boolean().optional(),
 });
 
@@ -60,6 +71,8 @@ const listSchema = z.object({
     .object({
       role: z.cuid("invalid-role-id").optional(),
       status: z.enum(["active", "inactive"], "invalid-status").optional(),
+      campus: z.cuid("invalid-campus-id").optional(),
+      faculty: z.cuid("invalid-faculty-id").optional(),
     })
     .optional(),
   search: z

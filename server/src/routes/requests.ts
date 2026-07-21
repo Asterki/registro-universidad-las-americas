@@ -1,17 +1,17 @@
 import express from "express";
 
 // Controllers
-import createHandler from "../controllers/requests/create.js";
-import createForStudentHandler from "../controllers/requests/create-for-student.js";
-import listMyHandler from "../controllers/requests/list-my.js";
-import listHandler from "../controllers/requests/list.js";
-import detailHandler from "../controllers/requests/detail.js";
-import approveHandler from "../controllers/requests/approve.js";
-import rejectHandler from "../controllers/requests/reject.js";
-import reviewHandler from "../controllers/requests/review.js";
-import resolveHandler from "../controllers/requests/resolve.js";
-import assignHandler from "../controllers/requests/assign.js";
-import addResponseHandler from "../controllers/requests/add-response.js";
+import createHandler from "../controllers/requests/student/create.js";
+import createForStudentHandler from "../controllers/requests/student/create.js";
+import listMyHandler from "../controllers/requests/student/list-my.js";
+import listHandler from "../controllers/requests/admin/list.js";
+import detailHandler from "../controllers/requests/admin/get.js";
+import approveHandler from "../controllers/requests/admin/update.js";
+import rejectHandler from "../controllers/requests/admin/update.js";
+import reviewHandler from "../controllers/requests/admin/update.js";
+import resolveHandler from "../controllers/requests/admin/update.js";
+import assignHandler from "../controllers/requests/admin/update.js";
+import addResponseHandler from "../controllers/requests/admin/update.js";
 
 // Middleware
 import { validateRequestBody } from "../middleware/validationMiddleware.js";
@@ -22,17 +22,12 @@ import {
 
 // Schemas
 import {
-  createMyRequestSchema,
-  createRequestForStudentSchema,
-  listMyRequestsSchema,
   listRequestsSchema,
-  getRequestDetailSchema,
-  approveRequestSchema,
-  rejectRequestSchema,
-  reviewRequestSchema,
-  resolveRequestSchema,
-  assignRequestSchema,
-  addRequestResponseSchema,
+  createRequestSchema,
+  deleteRequestSchema,
+  getRequestSchema,
+  restoreRequestSchema,
+  updateRequestSchema,
 } from "@shared/schemas/requests.js";
 
 const router = express.Router();
@@ -40,24 +35,34 @@ const router = express.Router();
 // Apply global auth middleware
 router.use(ensureAuthenticated);
 
+//#region ─── Requests Routes ───
+
+// ─── Student ───
+
 // Create request (self)
 router.post(
   "/create",
   ensurePermissions(["requests:create-student"]),
-  validateRequestBody(createMyRequestSchema),
+  validateRequestBody(createRequestSchema),
   createHandler,
 );
+
+// List my requests
+router.post(
+  "/list/my",
+  validateRequestBody(listRequestsSchema),
+  listMyHandler,
+);
+
+// ─── Admin ───
 
 // Create request for student (admin/staff)
 router.post(
   "/create/student",
   ensurePermissions(["requests:create-student"]),
-  validateRequestBody(createRequestForStudentSchema),
+  validateRequestBody(createRequestSchema),
   createForStudentHandler,
 );
-
-// List my requests
-router.post("/list/my", validateRequestBody(listMyRequestsSchema), listMyHandler);
 
 // List all requests (admin/staff)
 router.post(
@@ -71,7 +76,7 @@ router.post(
 router.post(
   "/detail",
   ensurePermissions(["requests:detail"]),
-  validateRequestBody(getRequestDetailSchema),
+  validateRequestBody(getRequestSchema),
   detailHandler,
 );
 
@@ -79,7 +84,7 @@ router.post(
 router.post(
   "/approve",
   ensurePermissions(["requests:approve"]),
-  validateRequestBody(approveRequestSchema),
+  validateRequestBody(updateRequestSchema),
   approveHandler,
 );
 
@@ -87,7 +92,7 @@ router.post(
 router.post(
   "/reject",
   ensurePermissions(["requests:reject"]),
-  validateRequestBody(rejectRequestSchema),
+  validateRequestBody(updateRequestSchema),
   rejectHandler,
 );
 
@@ -95,7 +100,7 @@ router.post(
 router.post(
   "/review",
   ensurePermissions(["requests:review"]),
-  validateRequestBody(reviewRequestSchema),
+  validateRequestBody(updateRequestSchema),
   reviewHandler,
 );
 
@@ -103,7 +108,7 @@ router.post(
 router.post(
   "/resolve",
   ensurePermissions(["requests:resolve"]),
-  validateRequestBody(resolveRequestSchema),
+  validateRequestBody(updateRequestSchema),
   resolveHandler,
 );
 
@@ -111,7 +116,7 @@ router.post(
 router.post(
   "/assign",
   ensurePermissions(["requests:assign"]),
-  validateRequestBody(assignRequestSchema),
+  validateRequestBody(updateRequestSchema),
   assignHandler,
 );
 
@@ -119,8 +124,10 @@ router.post(
 router.post(
   "/response/add",
   ensurePermissions(["requests:add-response"]),
-  validateRequestBody(addRequestResponseSchema),
+  validateRequestBody(updateRequestSchema),
   addResponseHandler,
 );
+
+//#endregion
 
 export default router;
