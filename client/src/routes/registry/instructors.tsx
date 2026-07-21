@@ -31,6 +31,10 @@ const { Title, Text } = Typography;
 import RegistryLayout from "../../layouts/Registry";
 import AccountsFeature from "../../features/accounts";
 import CoursesFeature from "../../features/courses";
+import AccountRolesFeature from "../../features/roles";
+import CampusesFeature from "../../features/campuses";
+import FacultiesFeature from "../../features/faculties";
+
 import courseInstructorApi from "../../features/course-instructor/api";
 
 export const Route = createFileRoute("/registry/instructors")({
@@ -48,6 +52,20 @@ function RouteComponent() {
     accountsListState: instructorsListState,
     fetchAccounts: fetchInstructors,
   } = AccountsFeature.hooks.useAccountsList({});
+
+  const {
+    accountRoles, fetchAccountRoles
+  } = AccountRolesFeature.hooks.useList({});
+
+
+  const {
+    faculties, fetchFaculties
+  } = FacultiesFeature.hooks.useList({});
+
+  const {
+    campuses, fetchCampuses
+  } = CampusesFeature.hooks.useList({});
+
 
   // ─── Update Instructor Modal ───
   const {
@@ -200,6 +218,21 @@ function RouteComponent() {
           count: 50,
           page: 0,
         });
+        await fetchAccountRoles({
+          count: 50,
+          page: 0,
+        });
+        await fetchFaculties({
+          count: 50,
+          page: 0,
+        });
+
+        await fetchCampuses({
+          count: 50,
+          page: 0,
+        });
+
+
       })();
     }
   }, [account]);
@@ -365,6 +398,9 @@ function RouteComponent() {
       {account && (
         <AccountsFeature.components.AccountsTable
           accounts={instructors}
+          accountRoles={accountRoles.accountRoles}
+          campuses={campuses.campuses}
+          faculties={faculties.faculties}
           accountsListState={instructorsListState}
           fetchAccounts={(params) =>
             fetchInstructors({
