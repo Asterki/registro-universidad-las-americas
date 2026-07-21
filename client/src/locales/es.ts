@@ -435,6 +435,17 @@ const translation = {
         logout: "Cerrar Sesión",
       },
     },
+    registry: {
+      sidebar: {
+        dashboard: "Panel de Control",
+        management: {
+          title: "Gestión del Sistema",
+          accounts: "Cuentas de Usuario",
+          "account-roles": "Roles de Cuenta",
+        },
+        logout: "Cerrar Sesión",
+      },
+    },
   },
 
   pages: {

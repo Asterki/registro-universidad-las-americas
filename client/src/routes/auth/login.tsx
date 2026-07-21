@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { App, Modal, Button, Form, Input, Typography, Card } from "antd";
@@ -13,15 +13,17 @@ import type { RootState, AppDispatch } from "../../store";
 import AuthFeature, { type AuthAPITypes } from "../../features/auth/";
 import GeneralLayout from "client/src/layouts/General";
 
-// import TerminalFeature from "../../features/terminals/";
-
 export const Route = createFileRoute("/auth/login")({
   component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
 });
 
 function RouteComponent() {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const { redirect } = useSearch({ from: "/auth/login" });
   const { t } = useTranslation(["pages"], { keyPrefix: "auth.login" });
 
   const dispatch = useDispatch<AppDispatch>();
@@ -63,6 +65,7 @@ function RouteComponent() {
     switch (payload.status) {
       case "success":
         message.success(t("messages.success"));
+        navigate({ to: (redirect || "/admin") as any });
         break;
       case "requires-tfa":
         message.info(t("messages.requires-tfa"));
@@ -81,9 +84,9 @@ function RouteComponent() {
 
   useEffect(() => {
     if (account) {
-      navigate({ to: "/admin" });
+      navigate({ to: (redirect || "/admin") as any });
     }
-  }, [account, navigate]);
+  }, [account, navigate, redirect]);
 
   // useEffect(() => {
   // 	if (!terminal) {
