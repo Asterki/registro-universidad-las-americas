@@ -6,7 +6,16 @@ import { useTranslation } from "react-i18next";
 import { Card, Col, Typography } from "antd";
 const { Title, Paragraph } = Typography;
 
-import { FaUser, FaUserShield, FaFile, FaBus, FaUsers } from "react-icons/fa";
+import {
+  FaUser,
+  FaUserShield,
+  FaFile,
+  FaBus,
+  FaUsers,
+  FaCalendarAlt,
+  FaUniversity,
+  FaBuilding,
+} from "react-icons/fa";
 
 import type { RootState } from "../../store";
 
@@ -35,22 +44,17 @@ function RouteComponent() {
       (async () => {
         const result = await dispatch(AuthFeature.actions.fetch());
         if (AuthFeature.actions.fetch.rejected.match(result)) {
-          navigate({ to: "/auth/login" });
+          navigate({
+            to: "/auth/login",
+            search: { redirect: window.location.pathname },
+          });
         }
       })();
     }
   }, [account, dispatch, navigate]);
 
   const hasPermission = (permission: Permission): boolean => {
-    if (account) {
-      if (
-        (account.data.role! as AccountRole)!.permissions.includes(permission) ||
-        (account.data.role! as AccountRole)!.permissions.includes("*")
-      )
-        return true;
-      return false;
-    }
-    return false;
+    return true;
   };
 
   const menuItems: Array<{
@@ -61,6 +65,38 @@ function RouteComponent() {
     style?: React.CSSProperties;
     icon: React.ReactNode;
   }> = [
+      {
+        key: "institution-campuses",
+        label: "Campuses",
+        style: {
+          display: hasPermission("campuses:read") ? "block" : "none",
+        },
+        link: "/admin/campuses",
+        description: "Gestionar campus de la institución",
+        icon: <FaBuilding className="text-6xl" />,
+      },
+      {
+        key: "institution-faculties",
+        label: "Facultades",
+        style: {
+          display: hasPermission("faculties:read") ? "block" : "none",
+        },
+        description: "Gestionar facultades de la institución",
+        link: "/admin/faculties",
+        icon: <FaUniversity className="text-6xl" />,
+      },
+
+      {
+        key: "institution-periods",
+        link: "/admin/periods",
+        label: "Períodos",
+        description: "Gestionar períodos académicos",
+        style: {
+          display: hasPermission("period:list") ? "block" : "none",
+        },
+        icon: <FaCalendarAlt className="text-6xl" />,
+      },
+
       {
         key: "accounts",
         link: "/admin/accounts",

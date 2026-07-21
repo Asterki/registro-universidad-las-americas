@@ -18,6 +18,8 @@ import {
   FaUserClock,
   FaClipboardList,
   FaChalkboardTeacher,
+  FaBackspace,
+  FaHome,
 } from "react-icons/fa";
 
 import {
@@ -30,7 +32,6 @@ import {
   Spin,
   Typography
 } from "antd";
-const { Title } = Typography;
 import esES from "antd/locale/es_ES";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -73,7 +74,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
           AuthFeature.actions.fetch.rejected.match(result) ||
           result.payload.status === "unauthenticated"
         ) {
-          navigate({ to: "/auth/login" });
+          navigate({ to: "/auth/login", search: { redirect: window.location.pathname } });
         } else {
           console.log("Account fetched successfully:", result.payload);
         }
@@ -96,6 +97,12 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
     const userPermissions = account.data.role.permissions;
 
     return [
+      {
+        key: "return",
+        label: <Link to="/">Página Principal</Link>,
+        icon: <FaHome />,
+      },
+
       // === Registry Dashboard ===
       {
         key: "dashboard",
@@ -112,29 +119,29 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
           {
             key: "requests",
             label: (
-              <Link to="/registry/requests">
+              <Link to="/registry/requests" search={{ redirect: window.location.pathname }}>
                 Solicitudes
               </Link>
             ),
             icon: <FaClipboardList />,
           },
           {
-            key: "instructors",
+            key: "courses",
             label: (
-              <Link to="/registry/instructors">
-                Instructores
+              <Link to="/registry/courses">
+                Cursos
               </Link>
             ),
             icon: <FaChalkboardTeacher />,
           },
           {
-            key: "students",
+            key: "registry-instructors",
             label: (
-              <Link to="/registry/students">
-                Estudiantes
+              <Link to="/registry/instructors">
+                Profesores
               </Link>
             ),
-            icon: <FaUsers />,
+            icon: <FaChalkboardTeacher />,
           },
         ],
       },

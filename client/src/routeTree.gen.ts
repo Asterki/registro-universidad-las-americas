@@ -25,6 +25,7 @@ import { Route as StudentAcademicHistoryRouteImport } from './routes/student/aca
 import { Route as RegistryStudentsRouteImport } from './routes/registry/students'
 import { Route as RegistryRequestsRouteImport } from './routes/registry/requests'
 import { Route as RegistryInstructorsRouteImport } from './routes/registry/instructors'
+import { Route as RegistryCoursesRouteImport } from './routes/registry/courses'
 import { Route as InstructorRecordGradesRouteImport } from './routes/instructor/record-grades'
 import { Route as InstructorProfileRouteImport } from './routes/instructor/profile'
 import { Route as InstructorMyRequestsRouteImport } from './routes/instructor/my-requests'
@@ -124,6 +125,11 @@ const RegistryRequestsRoute = RegistryRequestsRouteImport.update({
 const RegistryInstructorsRoute = RegistryInstructorsRouteImport.update({
   id: '/registry/instructors',
   path: '/registry/instructors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistryCoursesRoute = RegistryCoursesRouteImport.update({
+  id: '/registry/courses',
+  path: '/registry/courses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstructorRecordGradesRoute = InstructorRecordGradesRouteImport.update({
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/instructor/my-requests': typeof InstructorMyRequestsRoute
   '/instructor/profile': typeof InstructorProfileRoute
   '/instructor/record-grades': typeof InstructorRecordGradesRoute
+  '/registry/courses': typeof RegistryCoursesRoute
   '/registry/instructors': typeof RegistryInstructorsRoute
   '/registry/requests': typeof RegistryRequestsRoute
   '/registry/students': typeof RegistryStudentsRoute
@@ -285,6 +292,7 @@ export interface FileRoutesByTo {
   '/instructor/my-requests': typeof InstructorMyRequestsRoute
   '/instructor/profile': typeof InstructorProfileRoute
   '/instructor/record-grades': typeof InstructorRecordGradesRoute
+  '/registry/courses': typeof RegistryCoursesRoute
   '/registry/instructors': typeof RegistryInstructorsRoute
   '/registry/requests': typeof RegistryRequestsRoute
   '/registry/students': typeof RegistryStudentsRoute
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/instructor/my-requests': typeof InstructorMyRequestsRoute
   '/instructor/profile': typeof InstructorProfileRoute
   '/instructor/record-grades': typeof InstructorRecordGradesRoute
+  '/registry/courses': typeof RegistryCoursesRoute
   '/registry/instructors': typeof RegistryInstructorsRoute
   '/registry/requests': typeof RegistryRequestsRoute
   '/registry/students': typeof RegistryStudentsRoute
@@ -364,6 +373,7 @@ export interface FileRouteTypes {
     | '/instructor/my-requests'
     | '/instructor/profile'
     | '/instructor/record-grades'
+    | '/registry/courses'
     | '/registry/instructors'
     | '/registry/requests'
     | '/registry/students'
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/instructor/my-requests'
     | '/instructor/profile'
     | '/instructor/record-grades'
+    | '/registry/courses'
     | '/registry/instructors'
     | '/registry/requests'
     | '/registry/students'
@@ -440,6 +451,7 @@ export interface FileRouteTypes {
     | '/instructor/my-requests'
     | '/instructor/profile'
     | '/instructor/record-grades'
+    | '/registry/courses'
     | '/registry/instructors'
     | '/registry/requests'
     | '/registry/students'
@@ -479,6 +491,7 @@ export interface RootRouteChildren {
   InstructorMyRequestsRoute: typeof InstructorMyRequestsRoute
   InstructorProfileRoute: typeof InstructorProfileRoute
   InstructorRecordGradesRoute: typeof InstructorRecordGradesRoute
+  RegistryCoursesRoute: typeof RegistryCoursesRoute
   RegistryInstructorsRoute: typeof RegistryInstructorsRoute
   RegistryRequestsRoute: typeof RegistryRequestsRoute
   RegistryStudentsRoute: typeof RegistryStudentsRoute
@@ -610,6 +623,13 @@ declare module '@tanstack/react-router' {
       path: '/registry/instructors'
       fullPath: '/registry/instructors'
       preLoaderRoute: typeof RegistryInstructorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registry/courses': {
+      id: '/registry/courses'
+      path: '/registry/courses'
+      fullPath: '/registry/courses'
+      preLoaderRoute: typeof RegistryCoursesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/instructor/record-grades': {
@@ -775,6 +795,7 @@ const rootRouteChildren: RootRouteChildren = {
   InstructorMyRequestsRoute: InstructorMyRequestsRoute,
   InstructorProfileRoute: InstructorProfileRoute,
   InstructorRecordGradesRoute: InstructorRecordGradesRoute,
+  RegistryCoursesRoute: RegistryCoursesRoute,
   RegistryInstructorsRoute: RegistryInstructorsRoute,
   RegistryRequestsRoute: RegistryRequestsRoute,
   RegistryStudentsRoute: RegistryStudentsRoute,

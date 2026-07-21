@@ -23,15 +23,17 @@ export function useMyCourses() {
 
   const fetchCourses = useCallback(async () => {
     setLoading(true);
-    const result = await courseInstructorApi.listInstructor({ accountId: "" });
+    const result = await courseInstructorApi.listInstructor({
+      accountId: "user",
+    });
     if (result.status === "success") {
       const mapped = (result.courses ?? []).map((c: any) => ({
         id: c.id ?? c._id ?? "",
         courseId: c.courseId ?? "",
-        courseName: c.course?.name ?? c.courseName ?? "",
-        courseCode: c.course?.code ?? c.courseCode ?? "",
-        faculty: c.course?.faculty ?? c.faculty ?? "",
-        period: c.course?.period ?? c.period ?? "",
+        courseName: c.name ?? c.courseName ?? "",
+        courseCode: c.code ?? c.courseCode ?? "",
+        faculty: c.faculty.name ?? c.faculty ?? "",
+        period: c.period.name ?? c.period ?? "",
         schedule: c.schedule ?? c.course?.schedule ?? "",
         classroom: c.classroom ?? c.course?.classroom ?? "",
         enrolledCount: c.enrolledCount ?? c._count?.enrollments ?? 0,

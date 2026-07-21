@@ -34,13 +34,14 @@ const handler = async (
 ) => {
   const start = performance.now();
   const { courseId, accountId } = req.body;
-  const userAccount = req.user!;
 
   try {
     // Verify course exists
     const course = await prismaClient.course.findUnique({
       where: { id: courseId },
-      include: { instructors: { where: { id: accountId }, select: { id: true } } },
+      include: {
+        instructors: { where: { id: accountId }, select: { id: true } },
+      },
     });
 
     if (!course) {
@@ -51,7 +52,6 @@ const handler = async (
     const instructor = await prismaClient.account.findFirst({
       where: {
         id: accountId,
-        role: { name: "instructor" },
       },
       select: { id: true },
     });

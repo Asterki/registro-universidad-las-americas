@@ -30,7 +30,12 @@ export interface DeactivateInstructorAssignmentRequestBody {
 }
 
 export interface CourseInstructorResponse {
-  status: ResponseStatus | "assignment-not-found" | "already-assigned" | "instructor-not-found" | "course-not-found";
+  status:
+    | ResponseStatus
+    | "assignment-not-found"
+    | "already-assigned"
+    | "instructor-not-found"
+    | "course-not-found";
   course?: Course;
   instructor?: Account;
 }

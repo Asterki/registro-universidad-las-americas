@@ -30,19 +30,19 @@ export default function GeneralLayout({ children }: LayoutProps) {
       >
         {/* Top Navbar */}
         <Header
-          className={`px-4 flex items-center justify-between bg-white`}
+          className={`px-4 flex items-center justify-between color-white`}
           style={{ paddingInline: 16 }}
         >
           <Space align="center" className="" size={14}>
             <img
               src="/assets/img/icon.png"
-              alt="Logo"
+              alt="Icon"
               style={{ width: 42, height: 42, objectFit: "contain" }}
               className="rounded-full"
             />
             <div className="text-white">
               <h1 style={{ margin: 0 }} className="text-white font-bold text-lg">
-                Plantilla de Proyectos
+                Portal del Docente | Universidad de Las Américas
               </h1>
             </div>
           </Space>
@@ -53,10 +53,10 @@ export default function GeneralLayout({ children }: LayoutProps) {
         </Content>
 
         <Footer style={{ textAlign: "center", borderTop: "1px solid #262a33", background: "transparent" }}>
-          Hecho por <a href="https://asterki.xyz" target="_blank" className="underline">Grupo #4 - Estructuras de Datos</a> | {new Date().getFullYear()}
+          Hecho por Grupo #4 - Estructuras de Datos | {new Date().getFullYear()}
         </Footer>
       </Layout>
-    </ConfigProvider>
+    </ConfigProvider >
   );
 }
 

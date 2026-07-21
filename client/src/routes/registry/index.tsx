@@ -61,8 +61,8 @@ function RouteComponent() {
       {
         key: "instructors",
         link: "/registry/instructors",
-        label: "Instructores",
-        description: "Gestionar instructores registrados",
+        label: "Profesores",
+        description: "Gestionar profesores registrados",
         style: {
           display:
             account?.data.role.permissions.includes("registry:list-instructors") ||
@@ -95,38 +95,38 @@ function RouteComponent() {
 
   return (
     <RegistryLayout>
-      <div className="">
-        <Title level={2} style={{ marginBottom: 24 }}>
-          {greeting}, {account?.profile.name}
-        </Title>
-        <p className="text-blue-600">Panel de Registro Académico — gestión de solicitudes, instructores y estudiantes.</p>
+      <Title level={2} style={{ marginBottom: 24 }}>
+        {greeting}, {account?.profile.name}
+      </Title>
+      <Paragraph>
+        Gestión de cursos, profesores, estudiantes y solicitudes académicas. Accede a las secciones correspondientes para administrar los registros de la universidad.
+      </Paragraph>
 
-        <div className="flex gap-2 flex-wrap mt-8 items-stretch justify-center">
-          {menuItems.map((item) => (
-            <Card
-              hoverable
-              className="w-1/4"
-              key={item.key}
-              onClick={() => {
-                navigate({ to: item.link as any });
-              }}
-            >
-              <div className="flex items-center flex-1 justify-center gap-4 h-full">
-                <Col className="text-blue-600">{item.icon}</Col>
-                <Col>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {item.label}
-                  </p>
-                  {item.description && (
-                    <Paragraph type="secondary" style={{ margin: 0 }}>
-                      {item.description}
-                    </Paragraph>
-                  )}
-                </Col>
-              </div>
-            </Card>
-          ))}
-        </div>
+      <div className="flex gap-2 flex-wrap mt-8 items-stretch justify-center">
+        {menuItems.map((item) => (
+          <Card
+            hoverable
+            className="w-1/4"
+            key={item.key}
+            onClick={() => {
+              navigate({ to: item.link as any });
+            }}
+          >
+            <div className="flex items-center flex-1 justify-center gap-4 h-full">
+              <Col className="text-primary">{item.icon}</Col>
+              <Col>
+                <p className="text-2xl font-bold text-primary">
+                  {item.label}
+                </p>
+                {item.description && (
+                  <Paragraph type="secondary" style={{ margin: 0 }}>
+                    {item.description}
+                  </Paragraph>
+                )}
+              </Col>
+            </div>
+          </Card>
+        ))}
       </div>
     </RegistryLayout>
   );

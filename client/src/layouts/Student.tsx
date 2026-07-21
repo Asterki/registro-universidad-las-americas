@@ -63,7 +63,7 @@ export default function PageLayout({
           AuthFeature.actions.fetch.rejected.match(result) ||
           result.payload.status === "unauthenticated"
         ) {
-          navigate({ to: "/auth/login" });
+          navigate({ to: "/auth/login", search: { redirect: window.location.pathname } });
         } else {
           console.log("Account fetched successfully:", result.payload);
         }

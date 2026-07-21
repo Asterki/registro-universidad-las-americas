@@ -7,7 +7,11 @@ import prismaClient from "../../config/prisma.js";
 import { Prisma } from "@prisma/client";
 
 const handler = async (
-  req: Request<{}, {}, CourseInstructorAPITypes.ListInstructorCoursesRequestBody>,
+  req: Request<
+    {},
+    {},
+    CourseInstructorAPITypes.ListInstructorCoursesRequestBody
+  >,
   res: Response<CourseInstructorAPITypes.ListInstructorCoursesResponse>,
   _next: NextFunction,
 ) => {
@@ -20,7 +24,7 @@ const handler = async (
       where: {
         instructors: {
           some: {
-            id: accountId,
+            id: accountId === "user" ? userAccount.id : accountId,
           },
         },
         metadata: {
@@ -28,6 +32,10 @@ const handler = async (
             deleted: false,
           },
         },
+      },
+      include: {
+        faculty: true,
+        period: true,
       },
       orderBy: {
         name: "asc",

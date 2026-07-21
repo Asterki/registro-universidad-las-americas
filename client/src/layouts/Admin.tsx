@@ -16,6 +16,7 @@ import {
   FaBook,
   FaCalendarAlt,
   FaUserClock,
+  FaHome,
 } from "react-icons/fa";
 
 import {
@@ -71,7 +72,7 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
           AuthFeature.actions.fetch.rejected.match(result) ||
           result.payload.status === "unauthenticated"
         ) {
-          navigate({ to: "/auth/login" });
+          navigate({ to: "/auth/login", search: { redirect: window.location.pathname } });
         } else {
           console.log("Account fetched successfully:", result.payload);
         }
@@ -94,6 +95,12 @@ export default function PageLayout({ children, selectedPage, removePadding, defa
     const userPermissions = account.data.role.permissions;
 
     return [
+      {
+        key: "return",
+        label: <Link to="/">Página Principal</Link>,
+        icon: <FaHome />,
+      },
+
       // === Overview & Core ===
       {
         key: "dashboard",

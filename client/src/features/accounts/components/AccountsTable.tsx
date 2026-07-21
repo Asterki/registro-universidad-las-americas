@@ -33,6 +33,7 @@ type AccountsTableProps = {
   accountRoles?: { id: string; name: string; level: number }[];
   campuses?: { id: string; name: string }[];
   faculties?: { id: string; name: string }[];
+  extraActions?: (record: ListAccount) => React.ReactNode;
 };
 
 export function AccountsTable({
@@ -47,6 +48,7 @@ export function AccountsTable({
   accountRoles = [],
   campuses = [],
   faculties = [],
+  extraActions,
 }: AccountsTableProps) {
   const { t: tComponent } = useTranslation(["features"], {
     keyPrefix: "accounts.components.table",
@@ -349,6 +351,7 @@ export function AccountsTable({
 
               return (
                 <Space>
+                  {extraActions && extraActions(record)}
                   <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
                     <Button icon={<FaEllipsisH />}>
                       {tComponent("actionButtons.trigger")}

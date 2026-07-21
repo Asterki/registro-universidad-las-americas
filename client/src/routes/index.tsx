@@ -75,14 +75,6 @@ function LandingPage() {
     }
   }, [account, dispatch]);
 
-  const handleSelect = (href: string) => {
-    if (account) {
-      navigate({ to: href as any });
-    } else {
-      window.location.href = `/auth/login?redirect=${encodeURIComponent(href)}`;
-    }
-  };
-
   return (
     <ConfigProvider locale={esES}>
       <Layout className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
@@ -94,7 +86,7 @@ function LandingPage() {
               alt="Logo"
               className="w-10 h-10 rounded-full object-contain"
             />
-            <Title level={4} className="!mb-0 text-white !m-0">
+            <Title level={4} className="!mb-0 !text-white !m-0">
               Universidad de Las Américas
             </Title>
           </Space>
@@ -168,13 +160,7 @@ function LandingPage() {
         {/* Footer */}
         <Footer className="text-center bg-transparent border-t border-white/10 !text-slate-500 !text-sm">
           Hecho por{" "}
-          <a
-            href="https://asterki.xyz"
-            target="_blank"
-            className="underline text-slate-400 hover:text-white transition-colors"
-          >
-            Grupo #4 - Estructuras de Datos
-          </a>{" "}
+          Grupo #4 - Estructuras de Datos
           | {new Date().getFullYear()}
         </Footer>
       </Layout>

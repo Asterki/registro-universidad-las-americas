@@ -16,6 +16,7 @@ import {
   FaSignOutAlt,
   FaCalendarAlt,
   FaChartLine,
+  FaHome,
 } from "react-icons/fa";
 
 import {
@@ -63,7 +64,7 @@ export default function InstructorLayout({ children, selectedPage, removePadding
           AuthFeature.actions.fetch.rejected.match(result) ||
           result.payload.status === "unauthenticated"
         ) {
-          navigate({ to: "/auth/login" });
+          navigate({ to: "/auth/login", search: { redirect: window.location.pathname } });
         }
       })();
     }
@@ -76,6 +77,12 @@ export default function InstructorLayout({ children, selectedPage, removePadding
     if (!account) return [];
 
     return [
+      {
+        key: "return",
+        label: <Link to="/">Página principal</Link>,
+        icon: <FaHome />,
+      },
+
       {
         key: "dashboard",
         label: <Link to="/instructor">Dashboard</Link>,
@@ -91,11 +98,6 @@ export default function InstructorLayout({ children, selectedPage, removePadding
             key: "my-courses",
             label: <Link to="/instructor/my-courses">Cursos Asignados</Link>,
             icon: <FaClipboardList />,
-          },
-          {
-            key: "schedule",
-            label: <Link to="/instructor/my-courses">Horario</Link>,
-            icon: <FaCalendarAlt />,
           },
         ],
       },

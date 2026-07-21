@@ -13,6 +13,7 @@ import PeriodsRouter from "./periods.js";
 import AccountProfilesRouter from "./account-profiles.js";
 import RegistryRouter from "./registry.js";
 import FacultiesRouter from "./faculties.js";
+import CourseInstructorRouter from "./course-instructor.js";
 
 export function registerRoutes(app: Express): void {
   app.use("/api/auth", AuthRouter);
@@ -23,6 +24,7 @@ export function registerRoutes(app: Express): void {
   // app.use("/api/grades", GradesRouter);
   // app.use("/api/requests", RequestsRouter);
   app.use("/api/courses", CoursesRouter);
+  app.use("/api/course-instructor", CourseInstructorRouter);
   app.use("/api/periods", PeriodsRouter);
   app.use("/api/account-profiles", AccountProfilesRouter);
   app.use("/api/registry", RegistryRouter);
