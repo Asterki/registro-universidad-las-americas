@@ -14,7 +14,6 @@ import prismaClient from "../../config/prisma.js";
 
 import LoggingService from "../../services/logging.js";
 
-type RequestUpdateInput = Prisma.RequestUpdateInput;
 type MetadataUpdateHistoryCreateWithoutMetadataInput =
   Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 type MetadataUpdateInput = Prisma.MetadataUpdateInput;
@@ -36,7 +35,6 @@ type UpdateRequestOptions = {
 
 export class RequestNotFoundError extends Error {
   retryable = false;
-  /** @param message Error message */
   constructor(message: string) {
     super(message);
     this.name = "RequestNotFoundError";
@@ -61,30 +59,20 @@ export async function updateRequest(
   } = params;
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing request ensuring it's not deleted (metadata.deleted !== true)
   const existingRequest = await prismaClient.request.findUnique({
-    where: {
-      id: requestId,
-      metadata: {
-        is: {
-          deleted: false,
-        },
-      },
-    },
+    where: { id: requestId },
     include: {
       metadata: { include: { updateHistory: true } },
     },
   });
 
-  if (!existingRequest) {
+  if (!existingRequest || existingRequest.metadata?.deleted) {
     throw new RequestNotFoundError("Request not found or deleted");
   }
 
-  // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
   const updatePayload: Prisma.RequestUpdateInput = {};
 
-  // Doing it like this because otherwise we lose type safety
   if (type !== undefined) {
     changes.type = type;
     updatePayload.type = type;
@@ -97,7 +85,6 @@ export async function updateRequest(
     changes.status = status;
     updatePayload.status = status;
 
-    // Auto-set resolvedAt when moving out of pending, unless explicitly provided
     if (resolvedAt === undefined && status !== RequestStatus.pending) {
       changes.resolvedAt = now.toISOString();
       updatePayload.resolvedAt = now;
@@ -153,7 +140,7 @@ export async function updateRequest(
   }
 
   const updated = await prismaClient.request.update({
-    where: { id: params.requestId },
+    where: { id: requestId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -166,11 +153,11 @@ export async function updateRequest(
     duration: Number((performance.now() - startTime).toFixed(3)),
     details: {
       requestId: updated.id,
-      updatedBy: userAccountId != null ? userAccountId : undefined,
+      ...(userAccountId ? { updatedBy: userAccountId } : {}),
     },
     _references: {
       requestId: "Request",
-      updatedBy: "Account",
+      ...(userAccountId ? { updatedBy: "Account" } : {}),
     },
   });
 
@@ -189,6 +176,7 @@ export async function updateRequestWithRetry(
       } catch (error: any) {
         if (error instanceof RequestNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

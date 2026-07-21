@@ -16,7 +16,7 @@ model AccountRole {
   level             Int
   requiresTwoFactor Boolean @default(false)
 
-  permissions String?   @db.Text // comma-separated or JSON string
+  permissions String?   @db.Text
   accounts    Account[]
 
   metadataId String?   @unique
@@ -66,32 +66,31 @@ model Account {
   forgotPasswordTokenExpires DateTime?
   lastPasswordChange         DateTime
 
-  // student-specific (was Estudiante)
+  // student-specific
   accountNumber  String?         @unique @db.VarChar(20)
   academicStatus AcademicStatus?
   enrollmentDate DateTime?       @db.Date
 
-  // teacher-specific (was Maestro)
+  // teacher-specific
   specialty    String?  @db.VarChar(150)
   contractType String?  @db.VarChar(50)
-  campusId     String? // campus assigned by registry
+  campusId     String?
   campus       Campus?  @relation(fields: [campusId], references: [id])
   facultyId    String?
-  faculty      Faculty? @relation(fields: [facultyId], references: [id])
+  faculty      Faculty? @relation("AccountFaculty", fields: [facultyId], references: [id])
 
-  // academic back-relations
-  courseInstructorAssignments CourseInstructor[]
-  coordinator                 Coordinator?
-  gradesRecorded              Grade[]            @relation("GradeRecordedBy")
-  enrollments                 Enrollment[]       @relation("EnrollmentAccount")
-  enrollmentsCancelled        Enrollment[]       @relation("EnrollmentCancelledBy")
-  requestsMade                Request[]          @relation("RequestAccount")
-  requestsProcessed           Request[]          @relation("RequestProcessedBy")
+  // back-relations
+  gradesRecorded       Grade[]      @relation("GradeRecordedBy")
+  enrollments          Enrollment[] @relation("EnrollmentAccount")
+  enrollmentsCancelled Enrollment[] @relation("EnrollmentCancelledBy")
+  requestsMade         Request[]    @relation("RequestAccount")
+  requestsProcessed    Request[]    @relation("RequestProcessedBy")
+  coursesInstructed    Course[]     @relation("CourseInstructors")
+  facultiesCoordinated Faculty[]    @relation("FacultyCoordinators")
 
   metadataId String?   @unique
   metadata   Metadata? @relation("AccountMetadata", fields: [metadataId], references: [id])
 
-  // Back-relations for Metadata authorship
   metadataCreated         Metadata[]              @relation("MetadataCreatedBy")
   metadataUpdated         Metadata[]              @relation("MetadataUpdatedBy")
   metadataDeleted         Metadata[]              @relation("MetadataDeletedBy")
@@ -136,20 +135,17 @@ model Metadata {
   notes  String?         @db.VarChar(2000)
   tags   String?         @db.Text
 
-  // Back-relations
-  account          Account?          @relation("AccountMetadata")
-  accountRole      AccountRole?      @relation("AccountRoleMetadata")
-  config           Config?           @relation("ConfigMetadata")
-  campus           Campus?           @relation("CampusMetadata")
-  faculty          Faculty?          @relation("FacultyMetadata")
-  period           Period?           @relation("PeriodMetadata")
-  course           Course?           @relation("CourseMetadata")
-  courseInstructor CourseInstructor? @relation("CourseInstructorMetadata")
-  prerequisite     Prerequisite?     @relation("PrerequisiteMetadata")
-  enrollment       Enrollment?       @relation("EnrollmentMetadata")
-  grade            Grade?            @relation("GradeMetadata")
-  request          Request?          @relation("RequestMetadata")
-  coordinator      Coordinator?      @relation("CoordinatorMetadata")
+  // back-relations
+  account     Account?     @relation("AccountMetadata")
+  accountRole AccountRole? @relation("AccountRoleMetadata")
+  config      Config?      @relation("ConfigMetadata")
+  campus      Campus?      @relation("CampusMetadata")
+  faculty     Faculty?     @relation("FacultyMetadata")
+  period      Period?      @relation("PeriodMetadata")
+  course      Course?      @relation("CourseMetadata")
+  enrollment  Enrollment?  @relation("EnrollmentMetadata")
+  grade       Grade?       @relation("GradeMetadata")
+  request     Request?     @relation("RequestMetadata")
 }
 
 model MetadataUpdateHistory {
@@ -182,10 +178,9 @@ enum TimeFormats {
 model Config {
   id String @id @default(cuid())
 
-  currencySymbol String @default("$") @db.VarChar(5)
-
-  dateFormat DateFormats @default(YYYY_MM_DD)
-  timeFormat TimeFormats @default(HH_MM_24)
+  currencySymbol String      @default("$") @db.VarChar(5)
+  dateFormat     DateFormats @default(YYYY_MM_DD)
+  timeFormat     TimeFormats @default(HH_MM_24)
 
   metadataId String?   @unique
   metadata   Metadata? @relation("ConfigMetadata", fields: [metadataId], references: [id])
@@ -203,7 +198,7 @@ model Campus {
   createdAt DateTime @default(now()) @db.Date
 
   faculties Faculty[]
-  accounts  Account[] // teachers assigned to this campus
+  accounts  Account[]
 
   metadataId String?   @unique
   metadata   Metadata? @relation("CampusMetadata", fields: [metadataId], references: [id])
@@ -218,11 +213,11 @@ model Faculty {
   code     String  @unique @db.VarChar(10)
   dean     String? @db.VarChar(150)
 
-  campus       Campus        @relation(fields: [campusId], references: [id])
+  campus       Campus    @relation(fields: [campusId], references: [id])
   courses      Course[]
   requests     Request[]
-  coordinators Coordinator[]
-  accounts     Account[] // teachers belonging to this faculty
+  coordinators Account[] @relation("FacultyCoordinators")
+  accounts     Account[] @relation("AccountFaculty")
 
   metadataId String?   @unique
   metadata   Metadata? @relation("FacultyMetadata", fields: [metadataId], references: [id])
@@ -260,49 +255,21 @@ model Course {
   classroom   String? @db.VarChar(50)
   maxCapacity Int     @default(30)
 
-  faculty     Faculty            @relation(fields: [facultyId], references: [id])
-  period      Period             @relation(fields: [periodId], references: [id])
-  instructors CourseInstructor[]
+  faculty     Faculty      @relation(fields: [facultyId], references: [id])
+  period      Period       @relation(fields: [periodId], references: [id])
+  instructors Account[]    @relation("CourseInstructors")
   enrollments Enrollment[]
 
-  requirements     Prerequisite[] @relation("CourseWithPrerequisite")
-  isPrerequisiteOf Prerequisite[] @relation("CoursePrerequisite")
+  // self-relation: courses this course requires as prerequisites
+  prerequisites     Course[] @relation("CoursePrerequisites")
+  // self-relation: courses that require this course as a prerequisite
+  isPrerequisiteFor Course[] @relation("CoursePrerequisites")
 
   metadataId String?   @unique
   metadata   Metadata? @relation("CourseMetadata", fields: [metadataId], references: [id])
 
   @@unique([code, periodId])
   @@map("course")
-}
-
-model CourseInstructor {
-  id        String  @id @default(cuid())
-  courseId  String
-  accountId String
-  active    Boolean @default(true)
-
-  course  Course  @relation(fields: [courseId], references: [id])
-  account Account @relation(fields: [accountId], references: [id])
-
-  metadataId String?   @unique
-  metadata   Metadata? @relation("CourseInstructorMetadata", fields: [metadataId], references: [id])
-
-  @@unique([courseId, accountId])
-  @@map("course_instructor")
-}
-
-model Prerequisite {
-  id                   String @id @default(cuid())
-  courseId             String // course that has the requirement
-  prerequisiteCourseId String // course that must have been passed
-
-  course       Course @relation("CourseWithPrerequisite", fields: [courseId], references: [id])
-  prerequisite Course @relation("CoursePrerequisite", fields: [prerequisiteCourseId], references: [id])
-
-  metadataId String?   @unique
-  metadata   Metadata? @relation("PrerequisiteMetadata", fields: [metadataId], references: [id])
-
-  @@map("prerequisite")
 }
 
 //#endregion
@@ -342,7 +309,7 @@ model Enrollment {
 model Grade {
   id           String   @id @default(cuid())
   enrollmentId String
-  description  String   @db.VarChar(100) // "Midterm 1", "Assignment 3"
+  description  String   @db.VarChar(100)
   score        Decimal  @db.Decimal(5, 2)
   date         DateTime @default(now()) @db.Date
   recordedById String
@@ -390,28 +357,6 @@ model Request {
 
 //#endregion
 
-//#region Academic - Coordinators
-model Coordinator {
-  id        String  @id @default(cuid())
-  accountId String  @unique
-  facultyId String
-  active    Boolean @default(true)
-
-  account Account @relation(fields: [accountId], references: [id])
-  faculty Faculty @relation(fields: [facultyId], references: [id])
-
-  metadataId String?   @unique
-  metadata   Metadata? @relation("CoordinatorMetadata", fields: [metadataId], references: [id])
-
-  @@map("coordinator")
-}
-
-//#endregion
-
-//#region File
-// TODO: We aint got no file storage yet
-//#endregion
-
 //#region Session
 model Session {
   id        String   @id
@@ -422,9 +367,6 @@ model Session {
   @@map("sessions")
 }
 
-//#endregion
-
-//#region Chat
 //#endregion
 
 //#region Logs

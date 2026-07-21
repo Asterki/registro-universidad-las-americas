@@ -13,7 +13,7 @@ import {
 import LoggingService from "../../services/logging.js";
 
 type CreateRequestParameters = {
-  accountId: string;
+  accountId?: string;
   facultyId: string;
   type: string;
   description?: string;
@@ -24,6 +24,14 @@ type CreateRequestOptions = {
   traceId?: string;
   userAccount?: Account;
 };
+
+export class RequestAccountRequiredError extends Error {
+  retryable = false;
+  constructor(message = "request-account-required") {
+    super(message);
+    this.name = "RequestAccountRequiredError";
+  }
+}
 
 export class RequestAccountNotFoundError extends Error {
   retryable = false;
@@ -47,41 +55,45 @@ export async function createRequest(
 ): Promise<Request> {
   const startTime = performance.now();
 
-  const { accountId, facultyId, type, description = "", date } = params;
-
+  const { facultyId, type, description = "", date } = params;
   const now = new Date();
   const userAccount = options.userAccount;
 
-  try {
-    // create metadata first
-    const metadata = await prismaClient.metadata.create({
-      data: {
-        documentVersion: 1,
-        createdAt: now,
-        createdById: userAccount?.id,
-        updatedAt: now,
-        updatedById: userAccount?.id,
-        deleted: false,
-        deletedAt: null,
-        deletedById: null,
-        status: MetadataStatus.active,
-        source: MetadataSource.manual,
-        notes: "",
-        tags: "",
-      },
-    });
+  const accountId = params.accountId ?? userAccount?.id;
+  if (!accountId) {
+    throw new RequestAccountRequiredError();
+  }
 
-    // create request referencing metadataId
-    const request = await prismaClient.request.create({
-      data: {
-        accountId,
-        facultyId,
-        type,
-        description,
-        date: date ?? now,
-        status: "pending",
-        metadataId: metadata.id,
-      },
+  try {
+    const request = await prismaClient.$transaction(async (tx) => {
+      const metadata = await tx.metadata.create({
+        data: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccount?.id,
+          updatedAt: now,
+          updatedById: userAccount?.id,
+          deleted: false,
+          deletedAt: null,
+          deletedById: null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+        },
+      });
+
+      return tx.request.create({
+        data: {
+          accountId,
+          facultyId,
+          type,
+          description,
+          date: date ?? now,
+          status: "pending",
+          metadataId: metadata.id,
+        },
+      });
     });
 
     const duration = Number((performance.now() - startTime).toFixed(3));
@@ -107,16 +119,15 @@ export async function createRequest(
 
     return request;
   } catch (err: any) {
-    // handle foreign key constraint violations (P2003)
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2003"
     ) {
-      const target = (err.meta as any)?.field_name as string | undefined;
-      if (target?.includes("accountId")) {
+      const field = (err.meta as any)?.field_name as string | undefined;
+      if (field?.includes("accountId")) {
         throw new RequestAccountNotFoundError();
       }
-      if (target?.includes("facultyId")) {
+      if (field?.includes("facultyId")) {
         throw new RequestFacultyNotFoundError();
       }
     }
@@ -134,12 +145,13 @@ export async function createRequestWithRetry(
       try {
         return await createRequest(params, options);
       } catch (error: any) {
-        // non-retryable
         if (
+          error instanceof RequestAccountRequiredError ||
           error instanceof RequestAccountNotFoundError ||
           error instanceof RequestFacultyNotFoundError
         ) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

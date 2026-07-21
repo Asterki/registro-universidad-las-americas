@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { metadataFields, metadataPopulateFields } from "./index.js";
 
-// Shared fields
 const nameSchema = z
   .string()
   .min(1, "name-too-short")
@@ -18,101 +17,56 @@ const phoneSchema = z
   .string()
   .min(1, "phone-too-short")
   .max(20, "phone-too-long");
-const createdAtSchema = z.date().refine((date) => date <= new Date(), {
-  message: "createdAt-cannot-be-in-future",
+
+const campusFields = z.enum(
+  [...metadataFields, "id", "name", "city", "address", "phone", "createdAt"],
+  "invalid-field",
+);
+
+export const listCampusesSchema = z.object({
+  count: z.number().min(1, "count-too-low"),
+  page: z.number().min(0, "page-too-low"),
+  includeDeleted: z.boolean().optional(),
+  city: z.string().optional(),
+  search: z
+    .object({
+      query: z.string().min(1, "query-too-short").max(100, "query-too-long"),
+      searchIn: z.array(z.enum(["name", "city"], "invalid-search-field")),
+    })
+    .optional(),
+  fields: z.array(campusFields).optional(),
+  populate: z
+    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
+    .optional(),
 });
 
-// Create
-const createSchema = z.object({
+export const getCampusSchema = z.object({
+  campusIds: z.array(z.cuid("invalid-campus-id")),
+  fields: z.array(campusFields).optional(),
+  populate: z
+    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
+    .optional(),
+});
+
+export const createCampusSchema = z.object({
   name: nameSchema,
   city: citySchema,
   address: addressSchema,
   phone: phoneSchema,
 });
 
-// Update (cannot update `isSystemRole`)
-const updateSchema = z.object({
+export const updateCampusSchema = z.object({
   campusId: z.cuid("invalid-campus-id"),
   name: nameSchema.optional(),
   city: citySchema.optional(),
   address: addressSchema.optional(),
   phone: phoneSchema.optional(),
-  createdAt: createdAtSchema.optional(),
 });
 
-// Delete
-const deleteSchema = z.object({
+export const deleteCampusSchema = z.object({
   campusId: z.cuid("invalid-campus-id"),
 });
 
-// Restore
-const restoreSchema = z.object({
+export const restoreCampusSchema = z.object({
   campusId: z.cuid("invalid-campus-id"),
 });
-
-// Get
-const getSchema = z.object({
-  campusIds: z.array(z.cuid()),
-  fields: z
-    .array(
-      z.enum(
-        [
-          ...metadataFields,
-          "id",
-          "name",
-          "city",
-          "address",
-          "phone",
-          "createdAt",
-        ],
-        "invalid-field",
-      ),
-    )
-    .optional(),
-  populate: z
-    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
-    .optional(),
-});
-
-// List
-const listSchema = z.object({
-  count: z.number().min(1, "count-too-low"),
-  page: z.number().min(0, "page-too-low"),
-  includeDeleted: z.boolean().optional(),
-  search: z
-    .object({
-      query: z.string().max(100, "query-too-long"),
-      searchIn: z.array(
-        z.enum(["name", "description"], "invalid-search-field"),
-      ),
-    })
-    .optional(),
-  fields: z
-    .array(
-      z.enum(
-        [
-          ...metadataFields,
-          "id",
-          "name",
-          "city",
-          "address",
-          "phone",
-          "createdAt",
-        ],
-        "invalid-field",
-      ),
-    )
-    .optional(),
-  populate: z
-    .array(z.enum(metadataPopulateFields, "invalid-populate-path"))
-    .optional(),
-});
-
-export {
-  createSchema,
-  updateSchema,
-  deleteSchema,
-  getSchema,
-  restoreSchema,
-  listSchema,
-};

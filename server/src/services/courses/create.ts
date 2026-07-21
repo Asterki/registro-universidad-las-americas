@@ -14,7 +14,9 @@ import LoggingService from "../../services/logging.js";
 
 type CreateCourseParameters = {
   facultyId: string;
+  instructorsIds: string[];
   periodId: string;
+  prerequisitesIds: string[];
   code: string;
   name: string;
   credits: number;
@@ -42,43 +44,68 @@ export async function createCourse(
 ): Promise<Course> {
   const startTime = performance.now();
 
-  const { facultyId, periodId, code, name, credits, schedule, classroom, maxCapacity = 30 } = params;
+  const {
+    facultyId,
+    periodId,
+    instructorsIds,
+    prerequisitesIds: requirementsIds,
+    code,
+    name,
+    credits,
+    schedule,
+    classroom,
+    maxCapacity = 30,
+  } = params;
 
   const now = new Date();
   const userAccount = options.userAccount;
 
   try {
-    // create metadata first
-    const metadata = await prismaClient.metadata.create({
-      data: {
-        documentVersion: 1,
-        createdAt: now,
-        createdById: userAccount?.id,
-        updatedAt: now,
-        updatedById: userAccount?.id,
-        deleted: false,
-        deletedAt: null,
-        deletedById: null,
-        status: MetadataStatus.active,
-        source: MetadataSource.manual,
-        notes: "",
-        tags: "",
-      },
-    });
+    const course = await prismaClient.$transaction(async (tx) => {
+      const metadata = await tx.metadata.create({
+        data: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccount?.id,
+          updatedAt: now,
+          updatedById: userAccount?.id,
+          deleted: false,
+          deletedAt: null,
+          deletedById: null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+        },
+      });
 
-    // create course referencing metadataId
-    const course = await prismaClient.course.create({
-      data: {
-        facultyId,
-        periodId,
-        code,
-        name,
-        credits,
-        ...(schedule !== undefined ? { schedule } : {}),
-        ...(classroom !== undefined ? { classroom } : {}),
-        maxCapacity,
-        metadataId: metadata.id,
-      },
+      return tx.course.create({
+        data: {
+          facultyId,
+          periodId,
+          code,
+          name,
+          credits,
+          ...(schedule !== undefined ? { schedule } : {}),
+          ...(classroom !== undefined ? { classroom } : {}),
+          maxCapacity,
+          metadataId: metadata.id,
+          ...(instructorsIds?.length
+            ? {
+                instructors: {
+                  connect: instructorsIds.map((id) => ({ id })),
+                },
+              }
+            : {}),
+          ...(requirementsIds?.length
+            ? {
+                prerequisites: {
+                  connect: requirementsIds.map((id) => ({ id })),
+                },
+              }
+            : {}),
+        },
+      });
     });
 
     const duration = Number((performance.now() - startTime).toFixed(3));
@@ -93,6 +120,8 @@ export async function createCourse(
         courseId: course.id,
         code,
         name,
+        instructorsIds,
+        requirementsIds,
       },
       _references: {
         courseId: "Course",
@@ -101,7 +130,6 @@ export async function createCourse(
 
     return course;
   } catch (err: any) {
-    // handle unique constraint on [code, periodId] (P2002)
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
@@ -125,9 +153,9 @@ export async function createCourseWithRetry(
       try {
         return await createCourse(params, options);
       } catch (error: any) {
-        // non-retryable
         if (error instanceof CourseCodeExistsError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

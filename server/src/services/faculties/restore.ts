@@ -2,17 +2,12 @@ import retry from "async-retry";
 import { performance } from "perf_hooks";
 
 import prismaClient from "../../config/prisma.js";
-import {
-  Account,
-  Faculty,
-  MetadataSource,
-  MetadataStatus,
-  Prisma,
-} from "@prisma/client";
-type MetadataUpdateHistoryCreateWithoutMetadataInput =
-  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
+import { Account, Faculty, Prisma } from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
+
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 type RestoreFacultyOptions = {
   traceId?: string;
@@ -34,7 +29,6 @@ export async function restoreFaculty(
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch faculty with metadata + updateHistory
   const existingFaculty = await prismaClient.faculty.findUnique({
     where: {
       id: facultyId,
@@ -53,10 +47,8 @@ export async function restoreFaculty(
     },
   });
 
-  if (!existingFaculty) {
-    throw new FacultyNotFoundError(
-      "Faculty not found or already restored",
-    );
+  if (!existingFaculty || !existingFaculty.metadata) {
+    throw new FacultyNotFoundError("Faculty not found or already restored");
   }
 
   const now = new Date();
@@ -67,51 +59,22 @@ export async function restoreFaculty(
     changes: {
       "metadata.deleted": false,
       "metadata.deletedAt": null,
-      ...(userAccountId && { "metadata.deletedById": null }),
+      "metadata.deletedById": null,
     },
   };
 
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: false,
     deletedAt: null,
-    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    deletedBy: { disconnect: true },
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.FacultyUpdateInput;
-
-  // Update the metadata
-  if (existingFaculty.metadata) {
-    updatePayload = { metadata: { update: metadataUpdatePayload } };
-  } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as restored
-    updatePayload = {
-      metadata: {
-        create: {
-          documentVersion: 1,
-          createdAt: now,
-          createdById: userAccountId ?? null,
-          updatedAt: now,
-          updatedById: userAccountId ?? null,
-          deleted: false,
-          deletedAt: null,
-          deletedById: userAccountId ?? null,
-          status: MetadataStatus.active,
-          source: MetadataSource.manual,
-          notes: "",
-          tags: "",
-          updateHistory: { create: historyEntry },
-        },
-      },
-    };
-  }
-
-  // perform update: set metadata.deleted = false and append updateHistory
   const restored = await prismaClient.faculty.update({
     where: { id: facultyId },
-    data: updatePayload,
+    data: { metadata: { update: metadataUpdatePayload } },
     include: { metadata: { include: { updateHistory: true } } },
   });
 
@@ -125,12 +88,12 @@ export async function restoreFaculty(
     details: {
       facultyId: String(restored.id),
       name: restored.name,
-      ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
+      ...(userAccountId ? { restoredBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       facultyId: "Faculty",
-      ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
+      ...(userAccountId ? { restoredBy: "Account" } : {}),
     },
   });
 
@@ -149,6 +112,7 @@ export async function restoreFacultyWithRetry(
       } catch (error: any) {
         if (error instanceof FacultyNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

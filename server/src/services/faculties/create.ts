@@ -17,20 +17,13 @@ type CreateFacultyParameters = {
   name: string;
   code: string;
   dean?: string | null;
+  coordinatorIds?: string[];
 };
 
 type CreateFacultyOptions = {
   traceId?: string;
   userAccount?: Account;
 };
-
-export class FacultyExistsError extends Error {
-  retryable = false;
-  constructor(message = "faculty-name-in-use") {
-    super(message);
-    this.name = "FacultyExistsError";
-  }
-}
 
 export class FacultyCodeExistsError extends Error {
   retryable = false;
@@ -46,39 +39,46 @@ export async function createFaculty(
 ): Promise<Faculty> {
   const startTime = performance.now();
 
-  const { campusId, name, code, dean } = params;
+  const { campusId, name, code, dean, coordinatorIds } = params;
 
   const now = new Date();
   const userAccount = options.userAccount;
 
   try {
-    // create metadata first
-    const metadata = await prismaClient.metadata.create({
-      data: {
-        documentVersion: 1,
-        createdAt: now,
-        createdById: userAccount?.id,
-        updatedAt: now,
-        updatedById: userAccount?.id,
-        deleted: false,
-        deletedAt: null,
-        deletedById: null,
-        status: MetadataStatus.active,
-        source: MetadataSource.manual,
-        notes: "",
-        tags: "",
-      },
-    });
+    const faculty = await prismaClient.$transaction(async (tx) => {
+      const metadata = await tx.metadata.create({
+        data: {
+          documentVersion: 1,
+          createdAt: now,
+          createdById: userAccount?.id,
+          updatedAt: now,
+          updatedById: userAccount?.id,
+          deleted: false,
+          deletedAt: null,
+          deletedById: null,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
+          notes: "",
+          tags: "",
+        },
+      });
 
-    // create faculty referencing metadataId
-    const faculty = await prismaClient.faculty.create({
-      data: {
-        campusId,
-        name,
-        code,
-        dean: dean ?? undefined,
-        metadataId: metadata.id,
-      },
+      return tx.faculty.create({
+        data: {
+          campusId,
+          name,
+          code,
+          dean: dean ?? undefined,
+          metadataId: metadata.id,
+          ...(coordinatorIds?.length
+            ? {
+                coordinators: {
+                  connect: coordinatorIds.map((id) => ({ id })),
+                },
+              }
+            : {}),
+        },
+      });
     });
 
     const duration = Number((performance.now() - startTime).toFixed(3));
@@ -93,6 +93,7 @@ export async function createFaculty(
         facultyId: faculty.id,
         name,
         code,
+        coordinatorIds,
       },
       _references: {
         facultyId: "Faculty",
@@ -101,15 +102,12 @@ export async function createFaculty(
 
     return faculty;
   } catch (err: any) {
-    // handle unique constraint on name or code (P2002)
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      if ((err.meta as any)?.target?.includes?.("name")) {
-        throw new FacultyExistsError();
-      }
-      if ((err.meta as any)?.target?.includes?.("code")) {
+      const target = (err.meta as any)?.target as string[] | undefined;
+      if (target?.includes?.("code")) {
         throw new FacultyCodeExistsError();
       }
     }
@@ -127,12 +125,9 @@ export async function createFacultyWithRetry(
       try {
         return await createFaculty(params, options);
       } catch (error: any) {
-        // non-retryable
-        if (
-          error instanceof FacultyExistsError ||
-          error instanceof FacultyCodeExistsError
-        ) {
+        if (error instanceof FacultyCodeExistsError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

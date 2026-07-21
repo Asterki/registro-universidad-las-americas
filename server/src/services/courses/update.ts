@@ -27,6 +27,8 @@ type UpdateCourseParameters = {
   maxCapacity?: number;
   facultyId?: string;
   periodId?: string;
+  instructorsIds?: string[];
+  prerequisitesIds?: string[];
 };
 
 type UpdateCourseOptions = {
@@ -36,7 +38,6 @@ type UpdateCourseOptions = {
 
 export class CourseNotFoundError extends Error {
   retryable = false;
-  /** @param message Error message */
   constructor(message: string) {
     super(message);
     this.name = "CourseNotFoundError";
@@ -45,7 +46,6 @@ export class CourseNotFoundError extends Error {
 
 export class CourseCodeExistsError extends Error {
   retryable = false;
-  /** @param message Error message */
   constructor(message: string) {
     super(message);
     this.name = "CourseCodeExistsError";
@@ -59,34 +59,35 @@ export async function updateCourse(
   const startTime = performance.now();
   const now = new Date();
 
-  const { courseId, code, name, credits, schedule, classroom, maxCapacity, facultyId, periodId } =
-    params;
+  const {
+    courseId,
+    code,
+    name,
+    credits,
+    schedule,
+    classroom,
+    maxCapacity,
+    facultyId,
+    periodId,
+    instructorsIds,
+    prerequisitesIds,
+  } = params;
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing course ensuring it's not deleted (metadata.deleted !== true)
   const existingCourse = await prismaClient.course.findUnique({
-    where: {
-      id: courseId,
-      metadata: {
-        is: {
-          deleted: false,
-        },
-      },
-    },
+    where: { id: courseId },
     include: {
       metadata: { include: { updateHistory: true } },
     },
   });
 
-  if (!existingCourse) {
+  if (!existingCourse || existingCourse.metadata?.deleted) {
     throw new CourseNotFoundError("Course not found or deleted");
   }
 
-  // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
   const updatePayload: Prisma.CourseUpdateInput = {};
 
-  // Doing it like this because otherwise we lose type safety
   if (code !== undefined) {
     changes.code = code;
     updatePayload.code = code;
@@ -118,6 +119,18 @@ export async function updateCourse(
   if (periodId !== undefined) {
     changes.periodId = periodId;
     updatePayload.period = { connect: { id: periodId } };
+  }
+  if (instructorsIds !== undefined) {
+    changes.instructorsIds = instructorsIds;
+    updatePayload.instructors = {
+      set: instructorsIds.map((id) => ({ id })),
+    };
+  }
+  if (prerequisitesIds !== undefined) {
+    changes.requirementsIds = prerequisitesIds;
+    updatePayload.prerequisites = {
+      set: prerequisitesIds.map((id) => ({ id })),
+    };
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
@@ -158,7 +171,7 @@ export async function updateCourse(
 
   try {
     const updated = await prismaClient.course.update({
-      where: { id: params.courseId },
+      where: { id: courseId },
       data: updatePayload,
       include: { metadata: { include: { updateHistory: true } } },
     });
@@ -171,11 +184,11 @@ export async function updateCourse(
       duration: Number((performance.now() - startTime).toFixed(3)),
       details: {
         courseId: updated.id,
-        updatedBy: userAccountId != null ? userAccountId : undefined,
+        ...(userAccountId ? { updatedBy: userAccountId } : {}),
       },
       _references: {
         courseId: "Course",
-        updatedBy: "Account",
+        ...(userAccountId ? { updatedBy: "Account" } : {}),
       },
     });
 
@@ -208,6 +221,7 @@ export async function updateCourseWithRetry(
       } catch (error: any) {
         if (error instanceof CourseNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

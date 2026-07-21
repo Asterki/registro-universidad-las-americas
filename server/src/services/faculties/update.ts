@@ -22,6 +22,8 @@ type UpdateFacultyParameters = {
   name?: string;
   code?: string;
   dean?: string | null;
+  campusId?: string;
+  coordinatorIds?: string[];
 };
 
 type UpdateFacultyOptions = {
@@ -31,25 +33,14 @@ type UpdateFacultyOptions = {
 
 export class FacultyNotFoundError extends Error {
   retryable = false;
-  /** @param message Error message */
   constructor(message: string) {
     super(message);
     this.name = "FacultyNotFoundError";
   }
 }
 
-export class FacultyExistsError extends Error {
-  retryable = false;
-  /** @param message Error message */
-  constructor(message: string) {
-    super(message);
-    this.name = "FacultyExistsError";
-  }
-}
-
 export class FacultyCodeExistsError extends Error {
   retryable = false;
-  /** @param message Error message */
   constructor(message: string) {
     super(message);
     this.name = "FacultyCodeExistsError";
@@ -63,33 +54,23 @@ export async function updateFaculty(
   const startTime = performance.now();
   const now = new Date();
 
-  const { facultyId, name, code, dean } = params;
+  const { facultyId, name, code, dean, campusId, coordinatorIds } = params;
   const userAccountId = options.userAccount?.id;
 
-  // Fetch existing faculty ensuring it's not deleted (metadata.deleted !== true)
   const existingFaculty = await prismaClient.faculty.findUnique({
-    where: {
-      id: facultyId,
-      metadata: {
-        is: {
-          deleted: false,
-        },
-      },
-    },
+    where: { id: facultyId },
     include: {
       metadata: { include: { updateHistory: true } },
     },
   });
 
-  if (!existingFaculty) {
+  if (!existingFaculty || existingFaculty.metadata?.deleted) {
     throw new FacultyNotFoundError("Faculty not found or deleted");
   }
 
-  // Collect changes using external-facing keys
   const changes: MetadataUpdateHistory["changes"] = {};
   const updatePayload: Prisma.FacultyUpdateInput = {};
 
-  // Doing it like this because otherwise we lose type safety
   if (name !== undefined) {
     changes.name = name;
     updatePayload.name = name;
@@ -101,6 +82,16 @@ export async function updateFaculty(
   if (dean !== undefined) {
     changes.dean = dean;
     updatePayload.dean = dean;
+  }
+  if (campusId !== undefined) {
+    changes.campusId = campusId;
+    updatePayload.campus = { connect: { id: campusId } };
+  }
+  if (coordinatorIds !== undefined) {
+    changes.coordinatorIds = coordinatorIds;
+    updatePayload.coordinators = {
+      set: coordinatorIds.map((id) => ({ id })),
+    };
   }
 
   const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
@@ -141,7 +132,7 @@ export async function updateFaculty(
 
   try {
     const updated = await prismaClient.faculty.update({
-      where: { id: params.facultyId },
+      where: { id: facultyId },
       data: updatePayload,
       include: { metadata: { include: { updateHistory: true } } },
     });
@@ -154,11 +145,11 @@ export async function updateFaculty(
       duration: Number((performance.now() - startTime).toFixed(3)),
       details: {
         facultyId: updated.id,
-        updatedBy: userAccountId != null ? userAccountId : undefined,
+        ...(userAccountId ? { updatedBy: userAccountId } : {}),
       },
       _references: {
         facultyId: "Faculty",
-        updatedBy: "Account",
+        ...(userAccountId ? { updatedBy: "Account" } : {}),
       },
     });
 
@@ -168,12 +159,8 @@ export async function updateFaculty(
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      if ((err.meta as any)?.target?.includes?.("name")) {
-        throw new FacultyExistsError(
-          "A faculty with this name already exists",
-        );
-      }
-      if ((err.meta as any)?.target?.includes?.("code")) {
+      const target = (err.meta as any)?.target as string[] | undefined;
+      if (target?.includes?.("code")) {
         throw new FacultyCodeExistsError(
           "A faculty with this code already exists",
         );
@@ -195,10 +182,10 @@ export async function updateFacultyWithRetry(
       } catch (error: any) {
         if (
           error instanceof FacultyNotFoundError ||
-          error instanceof FacultyExistsError ||
           error instanceof FacultyCodeExistsError
         ) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

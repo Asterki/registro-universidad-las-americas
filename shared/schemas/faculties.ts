@@ -9,7 +9,7 @@ const codeSchema = z.string().min(1, "code-too-short").max(10, "code-too-long");
 const deanSchema = z.string().max(150, "dean-too-long").optional();
 
 const facultyFields = z.enum(
-  [...metadataFields, "id", "name", "code", "dean", "campusId"],
+  [...metadataFields, "id", "name", "code", "dean", "campusId", "coordinators"],
   "invalid-field",
 );
 
@@ -18,13 +18,16 @@ export const createFacultySchema = z.object({
   name: nameSchema,
   code: codeSchema,
   dean: deanSchema,
+  coordinatorIds: z.array(z.cuid("invalid-coordinator-id")).optional(),
 });
 
 export const updateFacultySchema = z.object({
   facultyId: z.cuid("invalid-faculty-id"),
+  campusId: z.cuid("invalid-campus-id").optional(),
   name: nameSchema.optional(),
   code: codeSchema.optional(),
   dean: deanSchema,
+  coordinatorIds: z.array(z.cuid("invalid-coordinator-id")).optional(),
 });
 
 export const deleteFacultySchema = z.object({
@@ -48,6 +51,7 @@ export const listFacultiesSchema = z.object({
   page: z.number().min(0, "page-too-low"),
   includeDeleted: z.boolean().optional(),
   campusId: z.cuid("invalid-campus-id").optional(),
+  coordinatorId: z.cuid("invalid-coordinator-id").optional(),
   search: z
     .object({
       query: z.string().min(1, "query-too-short"),

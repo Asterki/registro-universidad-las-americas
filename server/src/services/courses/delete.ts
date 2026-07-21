@@ -4,48 +4,39 @@ import { performance } from "perf_hooks";
 import prismaClient from "../../config/prisma.js";
 import {
   Account,
-  CourseInstructor,
+  Course,
+  MetadataSource,
+  MetadataStatus,
   Prisma,
 } from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
-import { CourseInstructorExistsError } from "./assign.js";
 
-type RemoveInstructorFromCourseParameters = {
-  courseId: string;
-  accountId: string;
-};
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
-type RemoveInstructorFromCourseOptions = {
+type DeleteCourseOptions = {
   traceId?: string;
   userAccount?: Account;
 };
 
-export class CourseInstructorNotFoundError extends Error {
+export class CourseNotFoundError extends Error {
   retryable = false;
-  constructor(message = "course-instructor-assignment-not-found") {
+  constructor(message: string) {
     super(message);
-    this.name = "CourseInstructorNotFoundError";
+    this.name = "CourseNotFoundError";
   }
 }
 
-export async function removeInstructorFromCourse(
-  params: RemoveInstructorFromCourseParameters,
-  options: RemoveInstructorFromCourseOptions = {},
-): Promise<CourseInstructor> {
+export async function deleteCourse(
+  courseId: string,
+  options: DeleteCourseOptions = {},
+): Promise<Course> {
   const startTime = performance.now();
-
-  const { courseId, accountId } = params;
   const userAccountId = options.userAccount?.id;
 
-  // find the assignment
-  const assignment = await prismaClient.courseInstructor.findUnique({
-    where: {
-      courseId_accountId: {
-        courseId,
-        accountId,
-      },
-    },
+  const existingCourse = await prismaClient.course.findUnique({
+    where: { id: courseId },
     include: {
       metadata: {
         include: {
@@ -55,13 +46,13 @@ export async function removeInstructorFromCourse(
     },
   });
 
-  if (!assignment) {
-    throw new CourseInstructorNotFoundError();
+  if (!existingCourse || existingCourse.metadata?.deleted) {
+    throw new CourseNotFoundError("Course not found or already deleted");
   }
 
   const now = new Date();
 
-  const historyEntry: Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput = {
+  const historyEntry: MetadataUpdateHistoryCreateWithoutMetadataInput = {
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     changes: {
@@ -80,9 +71,9 @@ export async function removeInstructorFromCourse(
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.CourseInstructorUpdateInput;
+  let updatePayload: Prisma.CourseUpdateInput;
 
-  if (assignment.metadata) {
+  if (existingCourse.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
     updatePayload = {
@@ -96,8 +87,8 @@ export async function removeInstructorFromCourse(
           deleted: true,
           deletedAt: now,
           deletedById: userAccountId ?? null,
-          status: "active" as any,
-          source: "manual" as any,
+          status: MetadataStatus.active,
+          source: MetadataSource.manual,
           notes: "",
           tags: "",
           updateHistory: { create: historyEntry },
@@ -106,13 +97,8 @@ export async function removeInstructorFromCourse(
     };
   }
 
-  const deleted = await prismaClient.courseInstructor.update({
-    where: {
-      courseId_accountId: {
-        courseId,
-        accountId,
-      },
-    },
+  const deleted = await prismaClient.course.update({
+    where: { id: courseId },
     data: updatePayload,
     include: { metadata: { include: { updateHistory: true } } },
   });
@@ -120,21 +106,18 @@ export async function removeInstructorFromCourse(
   const durationMs = Number((performance.now() - startTime).toFixed(3));
 
   LoggingService.log({
-    source: "services:course-instructor:remove",
+    source: "services:course:delete",
     level: "important",
-    message: "Instructor removed from course",
+    message: "Course deleted",
     traceId: options.traceId,
     details: {
-      courseInstructorId: String(deleted.id),
-      courseId,
-      accountId,
+      courseId: String(deleted.id),
+      code: deleted.code,
       ...(userAccountId ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
-      courseInstructorId: "CourseInstructor",
       courseId: "Course",
-      accountId: "Account",
       ...(userAccountId ? { deletedBy: "Account" } : {}),
     },
   });
@@ -142,26 +125,27 @@ export async function removeInstructorFromCourse(
   return deleted;
 }
 
-export async function removeInstructorFromCourseWithRetry(
-  params: RemoveInstructorFromCourseParameters,
-  options: RemoveInstructorFromCourseOptions = {},
-): Promise<CourseInstructor> {
+export async function deleteCourseWithRetry(
+  courseId: string,
+  options: DeleteCourseOptions = {},
+): Promise<Course> {
   return retry(
     async (bail, attempt) => {
       const startTime = performance.now();
       try {
-        return await removeInstructorFromCourse(params, options);
+        return await deleteCourse(courseId, options);
       } catch (error: any) {
-        if (error instanceof CourseInstructorNotFoundError) {
+        if (error instanceof CourseNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({
-          source: "services:course-instructor:remove:retry",
+          source: "services:course:delete:retry",
           level: "warning",
           traceId: options.traceId,
           duration: Number((performance.now() - startTime).toFixed(3)),
-          message: `Retryable error during instructor removal (attempt ${attempt})`,
+          message: `Retryable error during course deletion (attempt ${attempt})`,
           details: {
             error: error?.message,
             stack: error?.stack,

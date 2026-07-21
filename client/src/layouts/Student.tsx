@@ -126,10 +126,7 @@ export default function PageLayout({
               <Link to="/student/available-courses">Cursos Disponibles</Link>
             ),
           },
-          {
-            key: "my-courses",
-            label: <Link to="/student/my-enrollments">Mis Cursos</Link>,
-          },
+
         ],
       },
       {

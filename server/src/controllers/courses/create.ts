@@ -22,20 +22,22 @@ class PeriodNotFoundError extends Error {
   }
 }
 
-class CodeInUseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "CodeInUseError";
-  }
-}
-
 const handler = async (
   req: Request<{}, {}, CourseAPITypes.CreateCourseRequestBody>,
   res: Response<CourseAPITypes.CreateCourseResponseData>,
   _next: NextFunction,
 ) => {
   const start = performance.now();
-  const { facultyId, periodId, code, name, credits, schedule, classroom, maxCapacity } = req.body;
+  const {
+    facultyId,
+    periodId,
+    code,
+    name,
+    credits,
+    schedule,
+    classroom,
+    maxCapacity,
+  } = req.body;
 
   const userAccount = req.user!;
 
@@ -56,19 +58,6 @@ const handler = async (
     });
     if (!period) {
       throw new PeriodNotFoundError(`Period ${periodId} not found`);
-    }
-
-    // Check for duplicate code+period
-    const existing = await prismaClient.course.findFirst({
-      where: {
-        code,
-        periodId,
-        metadata: { is: { deleted: false } },
-      },
-      select: { id: true },
-    });
-    if (existing) {
-      throw new CodeInUseError(`A course with code ${code} already exists in this period.`);
     }
 
     const createdCourse = await createCourseWithRetry(
@@ -118,10 +107,6 @@ const handler = async (
     }
     if (error instanceof PeriodNotFoundError) {
       res.status(404).json({ status: "period-not-found" });
-      return;
-    }
-    if (error instanceof CodeInUseError) {
-      res.status(409).json({ status: "course-code-exists" });
       return;
     }
 

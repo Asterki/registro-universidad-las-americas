@@ -9,10 +9,11 @@ import {
   MetadataStatus,
   Prisma,
 } from "@prisma/client";
-type MetadataUpdateHistoryCreateWithoutMetadataInput =
-  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
+
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 type RestoreRequestOptions = {
   traceId?: string;
@@ -34,7 +35,6 @@ export async function restoreRequest(
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch request with metadata + updateHistory
   const existingRequest = await prismaClient.request.findUnique({
     where: {
       id: requestId,
@@ -53,10 +53,8 @@ export async function restoreRequest(
     },
   });
 
-  if (!existingRequest) {
-    throw new RequestNotFoundError(
-      "Request not found or already restored",
-    );
+  if (!existingRequest || !existingRequest.metadata) {
+    throw new RequestNotFoundError("Request not found or already restored");
   }
 
   const now = new Date();
@@ -67,51 +65,22 @@ export async function restoreRequest(
     changes: {
       "metadata.deleted": false,
       "metadata.deletedAt": null,
-      ...(userAccountId && { "metadata.deletedById": null }),
+      "metadata.deletedById": null,
     },
   };
 
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: false,
     deletedAt: null,
-    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    deletedBy: { disconnect: true },
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.RequestUpdateInput;
-
-  // Update the metadata
-  if (existingRequest.metadata) {
-    updatePayload = { metadata: { update: metadataUpdatePayload } };
-  } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
-    updatePayload = {
-      metadata: {
-        create: {
-          documentVersion: 1,
-          createdAt: now,
-          createdById: userAccountId ?? null,
-          updatedAt: now,
-          updatedById: userAccountId ?? null,
-          deleted: false,
-          deletedAt: null,
-          deletedById: userAccountId ?? null,
-          status: MetadataStatus.active,
-          source: MetadataSource.manual,
-          notes: "",
-          tags: "",
-          updateHistory: { create: historyEntry },
-        },
-      },
-    };
-  }
-
-  // perform update: set metadata.deleted = true and append updateHistory
-  const deleted = await prismaClient.request.update({
+  const restored = await prismaClient.request.update({
     where: { id: requestId },
-    data: updatePayload,
+    data: { metadata: { update: metadataUpdatePayload } },
     include: { metadata: { include: { updateHistory: true } } },
   });
 
@@ -123,18 +92,18 @@ export async function restoreRequest(
     message: "Request restored",
     traceId: options.traceId,
     details: {
-      requestId: String(deleted.id),
-      type: deleted.type,
-      ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
+      requestId: String(restored.id),
+      type: restored.type,
+      ...(userAccountId ? { restoredBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       requestId: "Request",
-      ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
+      ...(userAccountId ? { restoredBy: "Account" } : {}),
     },
   });
 
-  return deleted;
+  return restored;
 }
 
 export async function restoreRequestWithRetry(
@@ -149,6 +118,7 @@ export async function restoreRequestWithRetry(
       } catch (error: any) {
         if (error instanceof RequestNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

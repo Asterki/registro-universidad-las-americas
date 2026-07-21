@@ -9,10 +9,11 @@ import {
   MetadataStatus,
   Prisma,
 } from "@prisma/client";
-type MetadataUpdateHistoryCreateWithoutMetadataInput =
-  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
+
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 type DeleteRequestOptions = {
   traceId?: string;
@@ -34,16 +35,8 @@ export async function deleteRequest(
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch request with metadata + updateHistory
   const existingRequest = await prismaClient.request.findUnique({
-    where: {
-      id: requestId,
-      metadata: {
-        is: {
-          deleted: false,
-        },
-      },
-    },
+    where: { id: requestId },
     include: {
       metadata: {
         include: {
@@ -53,10 +46,8 @@ export async function deleteRequest(
     },
   });
 
-  if (!existingRequest) {
-    throw new RequestNotFoundError(
-      "Request not found or already deleted",
-    );
+  if (!existingRequest || existingRequest.metadata?.deleted) {
+    throw new RequestNotFoundError("Request not found or already deleted");
   }
 
   const now = new Date();
@@ -70,6 +61,7 @@ export async function deleteRequest(
       ...(userAccountId && { "metadata.deletedById": userAccountId }),
     },
   };
+
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: true,
     deletedAt: now,
@@ -81,11 +73,9 @@ export async function deleteRequest(
 
   let updatePayload: Prisma.RequestUpdateInput;
 
-  // Update the metadata
   if (existingRequest.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
     updatePayload = {
       metadata: {
         create: {
@@ -107,7 +97,6 @@ export async function deleteRequest(
     };
   }
 
-  // perform update: set metadata.deleted = true and append updateHistory
   const deleted = await prismaClient.request.update({
     where: { id: requestId },
     data: updatePayload,
@@ -124,12 +113,12 @@ export async function deleteRequest(
     details: {
       requestId: String(deleted.id),
       type: deleted.type,
-      ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
+      ...(userAccountId ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       requestId: "Request",
-      ...(userAccountId !== null ? { deletedBy: "Account" } : {}),
+      ...(userAccountId ? { deletedBy: "Account" } : {}),
     },
   });
 
@@ -148,6 +137,7 @@ export async function deleteRequestWithRetry(
       } catch (error: any) {
         if (error instanceof RequestNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

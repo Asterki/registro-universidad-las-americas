@@ -52,7 +52,7 @@ export default function GeneralLayout({ children }: LayoutProps) {
         </Content>
 
         <Footer style={{ textAlign: "center", borderTop: "1px solid #262a33", background: "transparent" }}>
-          Hecho por <a href="https://asterki.xyz" target="_blank" className="underline">Fernando Rivera</a> | {new Date().getFullYear()}
+          Hecho por <a href="https://asterki.xyz" target="_blank" className="underline">Grupo #4 - Estructuras de Datos</a> | {new Date().getFullYear()}
         </Footer>
       </Layout>
     </ConfigProvider>

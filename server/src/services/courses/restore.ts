@@ -2,17 +2,12 @@ import retry from "async-retry";
 import { performance } from "perf_hooks";
 
 import prismaClient from "../../config/prisma.js";
-import {
-  Account,
-  Course,
-  MetadataSource,
-  MetadataStatus,
-  Prisma,
-} from "@prisma/client";
-type MetadataUpdateHistoryCreateWithoutMetadataInput =
-  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
+import { Account, Course, Prisma } from "@prisma/client";
 
 import LoggingService from "../../services/logging.js";
+
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 type RestoreCourseOptions = {
   traceId?: string;
@@ -34,7 +29,6 @@ export async function restoreCourse(
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch course with metadata + updateHistory
   const existingCourse = await prismaClient.course.findUnique({
     where: {
       id: courseId,
@@ -53,10 +47,8 @@ export async function restoreCourse(
     },
   });
 
-  if (!existingCourse) {
-    throw new CourseNotFoundError(
-      "Course not found or already restored",
-    );
+  if (!existingCourse || !existingCourse.metadata) {
+    throw new CourseNotFoundError("Course not found or already restored");
   }
 
   const now = new Date();
@@ -67,51 +59,22 @@ export async function restoreCourse(
     changes: {
       "metadata.deleted": false,
       "metadata.deletedAt": null,
-      ...(userAccountId && { "metadata.deletedById": null }),
+      "metadata.deletedById": null,
     },
   };
 
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: false,
     deletedAt: null,
-    deletedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
+    deletedBy: { disconnect: true },
     updatedAt: now,
     updatedBy: userAccountId ? { connect: { id: userAccountId } } : undefined,
     updateHistory: { create: historyEntry },
   };
 
-  let updatePayload: Prisma.CourseUpdateInput;
-
-  // Update the metadata
-  if (existingCourse.metadata) {
-    updatePayload = { metadata: { update: metadataUpdatePayload } };
-  } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
-    updatePayload = {
-      metadata: {
-        create: {
-          documentVersion: 1,
-          createdAt: now,
-          createdById: userAccountId ?? null,
-          updatedAt: now,
-          updatedById: userAccountId ?? null,
-          deleted: false,
-          deletedAt: null,
-          deletedById: userAccountId ?? null,
-          status: MetadataStatus.active,
-          source: MetadataSource.manual,
-          notes: "",
-          tags: "",
-          updateHistory: { create: historyEntry },
-        },
-      },
-    };
-  }
-
-  // perform update: set metadata.deleted = false and append updateHistory
   const restored = await prismaClient.course.update({
     where: { id: courseId },
-    data: updatePayload,
+    data: { metadata: { update: metadataUpdatePayload } },
     include: { metadata: { include: { updateHistory: true } } },
   });
 
@@ -125,12 +88,12 @@ export async function restoreCourse(
     details: {
       courseId: String(restored.id),
       code: restored.code,
-      ...(userAccountId !== null ? { restoredBy: String(userAccountId) } : {}),
+      ...(userAccountId ? { restoredBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       courseId: "Course",
-      ...(userAccountId !== null ? { restoredBy: "Account" } : {}),
+      ...(userAccountId ? { restoredBy: "Account" } : {}),
     },
   });
 
@@ -149,6 +112,7 @@ export async function restoreCourseWithRetry(
       } catch (error: any) {
         if (error instanceof CourseNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({

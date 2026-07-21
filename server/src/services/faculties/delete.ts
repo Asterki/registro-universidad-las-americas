@@ -9,10 +9,11 @@ import {
   MetadataStatus,
   Prisma,
 } from "@prisma/client";
-type MetadataUpdateHistoryCreateWithoutMetadataInput =
-  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 import LoggingService from "../../services/logging.js";
+
+type MetadataUpdateHistoryCreateWithoutMetadataInput =
+  Prisma.MetadataUpdateHistoryCreateWithoutMetadataInput;
 
 type DeleteFacultyOptions = {
   traceId?: string;
@@ -34,16 +35,8 @@ export async function deleteFaculty(
   const startTime = performance.now();
   const userAccountId = options.userAccount?.id;
 
-  // fetch faculty with metadata + updateHistory
   const existingFaculty = await prismaClient.faculty.findUnique({
-    where: {
-      id: facultyId,
-      metadata: {
-        is: {
-          deleted: false,
-        },
-      },
-    },
+    where: { id: facultyId },
     include: {
       metadata: {
         include: {
@@ -53,10 +46,8 @@ export async function deleteFaculty(
     },
   });
 
-  if (!existingFaculty) {
-    throw new FacultyNotFoundError(
-      "Faculty not found or already deleted",
-    );
+  if (!existingFaculty || existingFaculty.metadata?.deleted) {
+    throw new FacultyNotFoundError("Faculty not found or already deleted");
   }
 
   const now = new Date();
@@ -70,6 +61,7 @@ export async function deleteFaculty(
       ...(userAccountId && { "metadata.deletedById": userAccountId }),
     },
   };
+
   const metadataUpdatePayload: Prisma.MetadataUpdateInput = {
     deleted: true,
     deletedAt: now,
@@ -81,11 +73,9 @@ export async function deleteFaculty(
 
   let updatePayload: Prisma.FacultyUpdateInput;
 
-  // Update the metadata
   if (existingFaculty.metadata) {
     updatePayload = { metadata: { update: metadataUpdatePayload } };
   } else {
-    // In the unlikely case that metadata doesn't exist, create it and mark as deleted
     updatePayload = {
       metadata: {
         create: {
@@ -107,7 +97,6 @@ export async function deleteFaculty(
     };
   }
 
-  // perform update: set metadata.deleted = true and append updateHistory
   const deleted = await prismaClient.faculty.update({
     where: { id: facultyId },
     data: updatePayload,
@@ -124,12 +113,12 @@ export async function deleteFaculty(
     details: {
       facultyId: String(deleted.id),
       name: deleted.name,
-      ...(userAccountId !== null ? { deletedBy: String(userAccountId) } : {}),
+      ...(userAccountId ? { deletedBy: String(userAccountId) } : {}),
     },
     duration: durationMs,
     _references: {
       facultyId: "Faculty",
-      ...(userAccountId !== null ? { deletedBy: "Account" } : {}),
+      ...(userAccountId ? { deletedBy: "Account" } : {}),
     },
   });
 
@@ -148,6 +137,7 @@ export async function deleteFacultyWithRetry(
       } catch (error: any) {
         if (error instanceof FacultyNotFoundError) {
           bail(error);
+          return undefined as never;
         }
 
         LoggingService.log({
